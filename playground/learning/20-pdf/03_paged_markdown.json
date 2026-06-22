@@ -1,0 +1,48 @@
+{
+  "title": "PDF page-by-page — PyMuPDF → postprocess (page_by_page) → file (run from project root)",
+  "imports": [
+    "../../../noid_collections/pdf/extractor_pymupdf/extractor_pymupdf.py",
+    "../../../noid_collections/pdf/postprocessor/postprocessor.py",
+    "../../../noid_collections/data/file_writer/file_writer.py",
+    "../../../noid_collections/basic/console_display/console_display.py"
+  ],
+  "components": [
+    {
+      "type": "pdf:extractor-pymupdf",
+      "id":   "extractor",
+      "properties": {
+        "input_file":   "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "output_mode":  "page_by_page",
+        "auto_extract": true
+      },
+      "publish": "page~pipeline/page;done~pipeline/done"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "progress",
+      "properties": {"label": "Extracting"},
+      "subscribe": "pipeline/page~show"
+    },
+    {
+      "type": "pdf:postprocessor",
+      "id":   "postproc",
+      "properties": {
+        "source":      "pymupdf",
+        "format":      "markdown",
+        "output_mode": "page_by_page"
+      },
+      "subscribe": "pipeline/page~page;pipeline/done~done",
+      "publish":   "page~pipeline/clean-page;done~pipeline/clean-done"
+    },
+    {
+      "type": "data:file-writer",
+      "id":   "writer",
+      "properties": {
+        "output_file":    "playground/learning/20-pdf/output_03_paged.md",
+        "page_separator": "\n\n"
+      },
+      "subscribe": "pipeline/clean-page~page;pipeline/clean-done~done",
+      "publish":   "written~player/done"
+    }
+  ]
+}

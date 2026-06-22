@@ -1,6 +1,7 @@
 {
   "additionalDirectories": [
     "~/git/mundorum/noid",
-    "~/git/huggingface/slm-agents-noid"
+    "~/git/huggingface/slm-agents-noid",
+    "~/git/lab2learn/data/case-teaching-cabot/extractor"
   ]
 }

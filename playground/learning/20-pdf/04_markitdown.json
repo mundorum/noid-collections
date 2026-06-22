@@ -1,0 +1,38 @@
+{
+  "title": "PDF extraction — MarkItDown → postprocess → file (run from project root)",
+  "imports": [
+    "../../../noid_collections/pdf/extractor_markitdown/extractor_markitdown.py",
+    "../../../noid_collections/pdf/postprocessor/postprocessor.py",
+    "../../../noid_collections/data/file_writer/file_writer.py"
+  ],
+  "components": [
+    {
+      "type": "pdf:extractor-markitdown",
+      "id":   "extractor",
+      "properties": {
+        "input_file":   "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "auto_extract": true
+      },
+      "publish": "text~pipeline/text;done~pipeline/done;error~pipeline/error"
+    },
+    {
+      "type": "pdf:postprocessor",
+      "id":   "postproc",
+      "properties": {
+        "source": "markitdown",
+        "format": "markdown"
+      },
+      "subscribe": "pipeline/text~text;pipeline/done~done",
+      "publish":   "text~pipeline/clean;done~pipeline/clean-done"
+    },
+    {
+      "type": "data:file-writer",
+      "id":   "writer",
+      "properties": {
+        "output_file": "playground/learning/20-pdf/output_04_markitdown.md"
+      },
+      "subscribe": "pipeline/clean~text;pipeline/clean-done~done",
+      "publish":   "written~player/done"
+    }
+  ]
+}
