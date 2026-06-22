@@ -1,0 +1,21 @@
+{
+  "title": "Producer-Consumer (bus queuing demo)",
+  "imports": [
+    "producer.py",
+    "consumer.py"
+  ],
+  "components": [
+    {
+      "type":       "learning:producer",
+      "id":         "prod",
+      "properties": {"count": 10},
+      "publish":    "item~pipeline/items;done~player/done"
+    },
+    {
+      "type":       "learning:consumer",
+      "id":         "cons",
+      "properties": {"label": "consumer"},
+      "subscribe":  "pipeline/items~item"
+    }
+  ]
+}
