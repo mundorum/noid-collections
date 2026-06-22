@@ -2,7 +2,8 @@
   "title": "Producer-Consumer (bus queuing demo)",
   "imports": [
     "producer.py",
-    "consumer.py"
+    "consumer.py",
+    "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
     {
@@ -15,7 +16,14 @@
       "type":       "learning:consumer",
       "id":         "cons",
       "properties": {"label": "consumer"},
-      "subscribe":  "pipeline/items~item"
+      "subscribe":  "pipeline/items~item",
+      "publish":    "consumed~pipeline/consumed"
+    },
+    {
+      "type":       "slm:console-display",
+      "id":         "display",
+      "properties": {"label": ""},
+      "subscribe":  "pipeline/items~show;pipeline/consumed~show"
     }
   ]
 }

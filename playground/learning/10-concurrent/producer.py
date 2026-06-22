@@ -56,7 +56,6 @@ class ProducerOid(OidComponent):
                 "body": f"item-{i}",
                 "produced_at": produced_at,
             }
-            print(f"Produced: {message['body']}  [{produced_at}]")
             await self._notify("item", message)
             await asyncio.sleep(random.random())
         await self._notify("done", {})
