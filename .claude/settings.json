@@ -1,0 +1,6 @@
+{
+  "additionalDirectories": [
+    "~/git/mundorum/noid",
+    "~/git/huggingface/slm-agents-noid"
+  ]
+}

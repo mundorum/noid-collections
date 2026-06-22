@@ -1,0 +1,51 @@
+{
+  "title": "SLM Agents demo — NER entities → Prolog reasoning",
+  "imports": [
+    "../noid_collections/slm_agents/text_source/text_source.py",
+    "../noid_collections/slm_agents/ner/ner.py",
+    "../noid_collections/slm_agents/prolog/prolog.py",
+    "../noid_collections/slm_agents/console_display/console_display.py"
+  ],
+  "components": [
+    {
+      "type": "slm:text-source",
+      "id":   "src",
+      "properties": {
+        "label":        "clinical-note",
+        "text":         "The patient Alice has fever and cough. She lives in São Paulo.",
+        "auto_publish": true
+      },
+      "publish": "text~pipeline/text-in"
+    },
+    {
+      "type": "slm:ner",
+      "id":   "ner",
+      "properties": {
+        "model": "dslim/bert-base-NER"
+      },
+      "subscribe": "pipeline/text-in~text",
+      "publish":   "entities~pipeline/ner-out"
+    },
+    {
+      "type": "slm:console-display",
+      "id":   "ner-display",
+      "properties": {"label": "NER Entities"},
+      "subscribe": "pipeline/ner-out~show"
+    },
+    {
+      "type": "slm:prolog",
+      "id":   "reasoner",
+      "properties": {
+        "facts_rules": "symptom_indicates(fever, infection).\nsymptom_indicates(cough, respiratory_issue).\nshould_consult(X) :- symptom_indicates(X, _)."
+      },
+      "subscribe": "pipeline/prolog-in~query",
+      "publish":   "result~pipeline/prolog-out;error~pipeline/prolog-error"
+    },
+    {
+      "type": "slm:console-display",
+      "id":   "prolog-display",
+      "properties": {"label": "Prolog Result"},
+      "subscribe": "pipeline/prolog-out~show"
+    }
+  ]
+}

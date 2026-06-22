@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mundorum-noid-collections"
+version = "0.1.0"
+description = "Reusable noid components — SLM agents and data pipeline building blocks"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "LGPL-2.1"
+authors = [
+    {name = "André Santanchè"}
+]
+
+dependencies = [
+    "mundorum-noid",
+]
+
+[project.optional-dependencies]
+slm = [
+    "ollama>=0.3",
+    "transformers>=4.40",
+    "torch",
+]
+sql = [
+    "duckdb>=0.10",
+]
+prolog = [
+    "pyswip>=0.2.10",
+]
+dev = [
+    "pytest>=8",
+    "pytest-asyncio>=0.23",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["noid_collections*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
