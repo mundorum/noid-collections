@@ -12,7 +12,7 @@
       "type": "pdf:ocr",
       "id":   "ocr",
       "properties": {
-        "input_file": "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "input_file": "playground/learning/20-pdf/pdf/case_teaching_in_medicine_1906.pdf",
         "auto_start": true
       },
       "publish": "done~pipeline/ocr-done;error~pipeline/error;status~pipeline/status"
@@ -41,7 +41,7 @@
       "type": "data:file-writer",
       "id":   "writer",
       "properties": {
-        "output_file": "playground/learning/20-pdf/output_05_ocr_markdown.md",
+        "output_file": "playground/learning/20-pdf/text/case_teaching_in_medicine_1906_ocr_paged.md",
         "page_separator": "\n\n"
       },
       "subscribe": "pipeline/clean-page~page;pipeline/clean-done~done",

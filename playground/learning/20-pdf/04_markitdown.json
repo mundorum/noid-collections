@@ -11,7 +11,7 @@
       "type": "pdf:extractor-markitdown",
       "id":   "extractor",
       "properties": {
-        "input_file":   "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "input_file":   "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf",
         "auto_extract": true
       },
       "publish": "text~pipeline/text;done~pipeline/done;error~pipeline/error;status~pipeline/status"
@@ -30,7 +30,7 @@
       "type": "data:file-writer",
       "id":   "writer",
       "properties": {
-        "output_file": "playground/learning/20-pdf/output_04_markitdown.md"
+        "output_file": "playground/learning/20-pdf/ulisses_james_joyce_markitdown.md"
       },
       "subscribe": "pipeline/clean~text;pipeline/clean-done~done",
       "publish":   "written~player/done"

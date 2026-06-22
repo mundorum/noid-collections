@@ -11,7 +11,7 @@
       "type": "pdf:extractor-pymupdf",
       "id":   "extractor",
       "properties": {
-        "input_file":   "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "input_file":   "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf",
         "output_mode":  "page_by_page",
         "auto_extract": true
       },
@@ -32,7 +32,7 @@
       "type": "data:file-writer",
       "id":   "writer",
       "properties": {
-        "output_file":    "playground/learning/20-pdf/output_03_paged.md",
+        "output_file":    "playground/learning/20-pdf/text/ulisses_james_joyce_pymupdf_paged.md",
         "page_separator": "\n\n"
       },
       "subscribe": "pipeline/clean-page~page;pipeline/clean-done~done",
