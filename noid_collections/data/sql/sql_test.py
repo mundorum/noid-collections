@@ -2,7 +2,7 @@
 import pytest
 
 from noid.core.bus import Bus
-from noid_collections.slm_agents.sql.sql import SqlAgentOid
+from noid_collections.data.sql.sql import SqlAgentOid
 
 
 async def test_sql_select_returns_rows() -> None:

@@ -1,9 +1,9 @@
 {
-  "title": "SLM Agents demo — text → LLM → console",
+  "title": "LM Agents demo — text → LM → console",
   "imports": [
-    "../noid_collections/slm_agents/text_source/text_source.py",
-    "../noid_collections/slm_agents/llm/llm.py",
-    "../noid_collections/slm_agents/console_display/console_display.py"
+    "../../../noid_collections/data/text_source/text_source.py",
+    "../../../noid_collections/lm_agents/lm/lm.py",
+    "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
     {
@@ -17,20 +17,20 @@
       "publish": "text~pipeline/input"
     },
     {
-      "type": "slm:llm-agent",
-      "id":   "llm",
+      "type": "lm:lm-agent",
+      "id":   "lm",
       "properties": {
         "model":           "llama3.2",
         "prompt_template": "Answer briefly: {input}"
       },
       "subscribe": "pipeline/input~input",
-      "publish":   "output~pipeline/llm-out;output~player/done"
+      "publish":   "output~pipeline/lm-out;output~player/done"
     },
     {
       "type": "slm:console-display",
       "id":   "display",
-      "properties": {"label": "LLM Reply"},
-      "subscribe": "pipeline/llm-out~show"
+      "properties": {"label": "LM Reply"},
+      "subscribe": "pipeline/lm-out~show"
     }
   ]
 }

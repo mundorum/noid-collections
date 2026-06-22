@@ -2,7 +2,7 @@
 import asyncio
 
 from noid.core.bus import Bus
-from noid_collections.slm_agents.text_source.text_source import TextSourceOid
+from noid_collections.data.text_source.text_source import TextSourceOid
 
 
 async def test_text_source_publishes_on_trigger() -> None:

@@ -1,5 +1,5 @@
 """
-slm:llm-agent — LLM component backed by Ollama.
+lm:lm-agent — LM component backed by Ollama.
 
 The Ollama model can be set at instantiation time via the `model` property.
 The `prompt_template` property accepts {input} and {question} placeholders.
@@ -12,7 +12,7 @@ from noid.core.component import Noid, OidComponent
 
 
 @Noid.component({
-    "id": "slm:llm-agent",
+    "id": "lm:lm-agent",
     "properties": {
         "model":           {"default": "llama3.2"},
         "host":            {"default": "http://localhost:11434"},
@@ -20,9 +20,9 @@ from noid.core.component import Noid, OidComponent
         "temperature":     {"default": 0.1},
     },
     "receive": ["input"],
-    "publish": "output~slm/llm/output",
+    "publish": "output~lm/lm/output",
 })
-class LLMAgentOid(OidComponent):
+class LMAgentOid(OidComponent):
     """Calls an Ollama model with a rendered prompt and publishes the reply."""
 
     async def handle_input(self, notice: str, message: dict) -> None:

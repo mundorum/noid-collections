@@ -1,10 +1,10 @@
 {
-  "title": "SLM Agents demo — NER entities → Prolog reasoning",
+  "title": "LM Agents demo — NER entities → Prolog reasoning",
   "imports": [
-    "../noid_collections/slm_agents/text_source/text_source.py",
-    "../noid_collections/slm_agents/ner/ner.py",
-    "../noid_collections/slm_agents/prolog/prolog.py",
-    "../noid_collections/slm_agents/console_display/console_display.py"
+    "../../../noid_collections/data/text_source/text_source.py",
+    "../../../noid_collections/lm_agents/ner/ner.py",
+    "../../../noid_collections/logic/prolog/prolog.py",
+    "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
     {

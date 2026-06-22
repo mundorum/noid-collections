@@ -6,8 +6,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from noid.core.bus import Bus
-import noid_collections.slm_agents.ner.ner as ner_module
-from noid_collections.slm_agents.ner.ner import NERAgentOid
+import noid_collections.lm_agents.ner.ner as ner_module
+from noid_collections.lm_agents.ner.ner import NERAgentOid
 
 
 def _fake_pipeline_output(text: str):

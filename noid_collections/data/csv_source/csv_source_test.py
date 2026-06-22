@@ -2,7 +2,7 @@
 import pytest
 
 from noid.core.bus import Bus
-from noid_collections.slm_agents.csv_source.csv_source import CsvSourceOid
+from noid_collections.data.csv_source.csv_source import CsvSourceOid
 
 CSV = "name,age,city\nAlice,30,SP\nBob,25,RJ\nCarol,35,BH"
 

@@ -4,7 +4,7 @@ import json
 import pytest
 
 from noid.core.bus import Bus
-from noid_collections.slm_agents.console_display.console_display import ConsoleDisplayOid
+from noid_collections.basic.console_display.console_display import ConsoleDisplayOid
 
 
 async def test_console_display_prints_dict(capsys) -> None:

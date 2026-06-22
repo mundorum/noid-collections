@@ -4,7 +4,7 @@ from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 from noid.core.bus import Bus
-from noid_collections.slm_agents.prolog.prolog import (
+from noid_collections.logic.prolog.prolog import (
     PrologAgentOid,
     _normalize_query,
     _clean_value,
