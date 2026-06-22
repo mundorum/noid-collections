@@ -8,7 +8,7 @@
   ],
   "components": [
     {
-      "type": "slm:text-source",
+      "type": "data:text-source",
       "id":   "src",
       "properties": {
         "label":        "clinical-note",
@@ -18,7 +18,7 @@
       "publish": "text~pipeline/text-in"
     },
     {
-      "type": "slm:ner",
+      "type": "lm:ner",
       "id":   "ner",
       "properties": {
         "model": "dslim/bert-base-NER"
@@ -27,13 +27,13 @@
       "publish":   "entities~pipeline/ner-out"
     },
     {
-      "type": "slm:console-display",
+      "type": "basic:console-display",
       "id":   "ner-display",
       "properties": {"label": "NER Entities"},
       "subscribe": "pipeline/ner-out~show"
     },
     {
-      "type": "slm:prolog",
+      "type": "logic:prolog",
       "id":   "reasoner",
       "properties": {
         "facts_rules": "symptom_indicates(fever, infection).\nsymptom_indicates(cough, respiratory_issue).\nshould_consult(X) :- symptom_indicates(X, _)."
@@ -42,7 +42,7 @@
       "publish":   "result~pipeline/prolog-out;error~pipeline/prolog-error"
     },
     {
-      "type": "slm:console-display",
+      "type": "basic:console-display",
       "id":   "prolog-display",
       "properties": {"label": "Prolog Result"},
       "subscribe": "pipeline/prolog-out~show"

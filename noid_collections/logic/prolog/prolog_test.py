@@ -1,4 +1,4 @@
-"""Tests for slm:prolog — mocks PySwip so SWI-Prolog need not be installed."""
+"""Tests for logic:prolog — mocks PySwip so SWI-Prolog need not be installed."""
 import sys
 from types import ModuleType
 from unittest.mock import MagicMock, patch

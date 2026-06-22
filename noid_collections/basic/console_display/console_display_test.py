@@ -1,4 +1,4 @@
-"""Tests for slm:console-display."""
+"""Tests for basic:console-display."""
 import json
 
 import pytest

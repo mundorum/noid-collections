@@ -1,4 +1,4 @@
-"""Tests for slm:csv-source."""
+"""Tests for data:csv-source."""
 import pytest
 
 from noid.core.bus import Bus

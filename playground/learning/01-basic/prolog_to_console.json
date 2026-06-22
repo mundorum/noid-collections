@@ -7,7 +7,7 @@
   ],
   "components": [
     {
-      "type": "slm:text-source",
+      "type": "data:text-source",
       "id":   "trigger",
       "properties": {
         "label":        "query",
@@ -17,7 +17,7 @@
       "publish": "text~pipeline/query-in"
     },
     {
-      "type": "slm:prolog",
+      "type": "logic:prolog",
       "id":   "reasoner",
       "properties": {
         "facts_rules": "human(socrates).\nhuman(plato).\nmortal(X) :- human(X)."
@@ -26,7 +26,7 @@
       "publish":   "result~pipeline/result;error~pipeline/result;done~player/done"
     },
     {
-      "type": "slm:console-display",
+      "type": "basic:console-display",
       "id":   "display",
       "properties": {"label": "Prolog"},
       "subscribe": "pipeline/result~show"

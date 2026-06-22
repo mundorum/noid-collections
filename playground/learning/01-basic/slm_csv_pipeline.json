@@ -7,7 +7,7 @@
   ],
   "components": [
     {
-      "type": "slm:csv-source",
+      "type": "data:csv-source",
       "id":   "csv",
       "properties": {
         "label":   "patients",
@@ -27,7 +27,7 @@
       "publish":   "output~pipeline/lm-out;output~pipeline/next"
     },
     {
-      "type": "slm:console-display",
+      "type": "basic:console-display",
       "id":   "display",
       "properties": {"label": "Diagnosis"},
       "subscribe": "pipeline/lm-out~show"

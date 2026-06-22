@@ -6,7 +6,7 @@
   ],
   "components": [
     {
-      "type": "slm:text-source",
+      "type": "data:text-source",
       "id":   "src",
       "properties": {
         "label":        "greeting",
@@ -16,7 +16,7 @@
       "publish": "text~pipeline/text;done~player/done"
     },
     {
-      "type": "slm:console-display",
+      "type": "basic:console-display",
       "id":   "display",
       "properties": {"label": "Text"},
       "subscribe": "pipeline/text~show"

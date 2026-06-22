@@ -1,5 +1,5 @@
 """
-slm:sql — executes SQL queries against a DuckDB or SQLite database.
+data:sql — executes SQL queries against a DuckDB or SQLite database.
 
 The database connection is opened lazily when the first `query` notice arrives.
 Multiple component instances can connect to different databases independently.
@@ -23,7 +23,7 @@ Publishes:
 
 Scene usage example:
   {
-    "type": "slm:sql",
+    "type": "data:sql",
     "properties": {"driver": "duckdb", "connection": "data/medical.db"},
     "subscribe": "pipeline/sql-in~query",
     "publish":   "result~pipeline/sql-out;error~pipeline/sql-error"
@@ -33,7 +33,7 @@ from noid.core.component import Noid, OidComponent
 
 
 @Noid.component({
-    "id": "slm:sql",
+    "id": "data:sql",
     "properties": {
         "driver":     {"default": "duckdb"},
         "connection": {"default": ":memory:"},

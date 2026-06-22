@@ -113,12 +113,12 @@ All SLM-agents components use the `slm` namespace: `slm:component-name`.
 noid_collections/
   slm_agents/
     llm/             slm:llm-agent    — Ollama LLM, configurable model
-    text_source/     slm:text-source  — publish static text on trigger
-    csv_source/      slm:csv-source   — publish full table or row-by-row
-    console_display/ slm:console-display — print to console
-    ner/             slm:ner          — Named Entity Recognition (transformers)
-    sql/             slm:sql          — SQL query via DuckDB or SQLite
-    prolog/          slm:prolog       — SWI-Prolog via PySwip
+    text_source/     data:text-source  — publish static text on trigger
+    csv_source/      data:csv-source   — publish full table or row-by-row
+    console_display/ basic:console-display — print to console
+    ner/             lm:ner          — Named Entity Recognition (transformers)
+    sql/             data:sql          — SQL query via DuckDB or SQLite
+    prolog/          logic:prolog       — SWI-Prolog via PySwip
 scenes/
   slm_demo.json      — NoidPlayer demo wiring all components
 ```

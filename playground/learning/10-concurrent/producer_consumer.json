@@ -20,7 +20,7 @@
       "publish":    "consumed~pipeline/consumed"
     },
     {
-      "type":       "slm:console-display",
+      "type":       "basic:console-display",
       "id":         "display",
       "properties": {"label": ""},
       "subscribe":  "pipeline/items~show;pipeline/consumed~show"

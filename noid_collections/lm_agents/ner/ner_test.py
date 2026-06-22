@@ -1,4 +1,4 @@
-"""Tests for slm:ner — mocks the transformers pipeline to avoid downloading models."""
+"""Tests for lm:ner — mocks the transformers pipeline to avoid downloading models."""
 import sys
 from types import ModuleType
 from unittest.mock import MagicMock, patch

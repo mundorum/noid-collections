@@ -1,5 +1,5 @@
 """
-slm:text-source — publishes static text content as a message on the bus.
+data:text-source — publishes static text content as a message on the bus.
 
 The `text` property holds the content.  Whenever a `trigger` notice is received
 (or at start if `auto_publish` is True), the component publishes a `text` notice
@@ -7,7 +7,7 @@ with a dict containing the label and content.
 
 Scene usage example:
     {
-      "type": "slm:text-source",
+      "type": "data:text-source",
       "properties": {"label": "intro", "text": "The patient has fever and cough."},
       "subscribe": "pipeline/start~trigger",
       "publish":   "text~pipeline/text-out"
@@ -19,7 +19,7 @@ from noid.core.component import Noid, OidComponent
 
 
 @Noid.component({
-    "id": "slm:text-source",
+    "id": "data:text-source",
     "properties": {
         "text":         {"default": ""},
         "label":        {"default": "text"},

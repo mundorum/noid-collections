@@ -7,7 +7,7 @@
   ],
   "components": [
     {
-      "type": "slm:text-source",
+      "type": "data:text-source",
       "id":   "src",
       "properties": {
         "label":        "question",
@@ -27,7 +27,7 @@
       "publish":   "output~pipeline/lm-out;output~player/done"
     },
     {
-      "type": "slm:console-display",
+      "type": "basic:console-display",
       "id":   "display",
       "properties": {"label": "LM Reply"},
       "subscribe": "pipeline/lm-out~show"

@@ -1,5 +1,5 @@
 """
-slm:csv-source — reads a CSV string and publishes it in two modes:
+data:csv-source — reads a CSV string and publishes it in two modes:
 
   1. Complete table  — send a `table` notice with all rows as a list of dicts.
   2. Row-by-row      — send `schema` once (column names), then one `row` per call.
@@ -19,7 +19,7 @@ Notices published:
 
 Scene usage example:
   {
-    "type": "slm:csv-source",
+    "type": "data:csv-source",
     "properties": {
       "label":   "patients",
       "content": "name,age\\nAlice,30\\nBob,25"
@@ -54,7 +54,7 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
 
 
 @Noid.component({
-    "id": "slm:csv-source",
+    "id": "data:csv-source",
     "properties": {
         "content": {"default": ""},
         "label":   {"default": "csv"},

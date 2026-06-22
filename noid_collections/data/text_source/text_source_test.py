@@ -1,4 +1,4 @@
-"""Tests for slm:text-source."""
+"""Tests for data:text-source."""
 import asyncio
 
 from noid.core.bus import Bus

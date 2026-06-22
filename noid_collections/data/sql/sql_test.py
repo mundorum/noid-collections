@@ -1,4 +1,4 @@
-"""Tests for slm:sql — uses SQLite in-memory so no external dependency needed."""
+"""Tests for data:sql — uses SQLite in-memory so no external dependency needed."""
 import pytest
 
 from noid.core.bus import Bus

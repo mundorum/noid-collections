@@ -1,9 +1,9 @@
 """
-slm:prolog — executes SWI-Prolog goals via PySwip.
+logic:prolog — executes SWI-Prolog goals via PySwip.
 
 Static facts and rules can be baked into the `facts_rules` property.  The
 `query` notice supplies additional facts/rules to merge at call time, plus the
-goal to execute.  This lets other pipeline components (e.g. slm:ner) inject
+goal to execute.  This lets other pipeline components (e.g. lm:ner) inject
 dynamically-derived facts.
 
 Properties:
@@ -29,7 +29,7 @@ Requires: pyswip>=0.2.10 + SWI-Prolog installed on the system.
 
 Scene usage example:
   {
-    "type": "slm:prolog",
+    "type": "logic:prolog",
     "properties": {
       "facts_rules": "mortal(X) :- human(X).\\nhuman(socrates)."
     },
@@ -95,7 +95,7 @@ def _run_prolog(program: str, goal: str) -> list:
 
 
 @Noid.component({
-    "id": "slm:prolog",
+    "id": "logic:prolog",
     "properties": {
         "facts_rules": {"default": ""},
     },

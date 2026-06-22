@@ -1,5 +1,5 @@
 """
-slm:console-display — prints received messages to stdout.
+basic:console-display — prints received messages to stdout.
 
 A sink component for pipeline development and debugging.  Receives a `show`
 notice and writes a formatted representation of the message to the console.
@@ -11,7 +11,7 @@ Properties:
 
 Scene usage example:
   {
-    "type": "slm:console-display",
+    "type": "basic:console-display",
     "properties": {"label": "LLM Output"},
     "subscribe": "pipeline/llm-out~show"
   }
@@ -22,7 +22,7 @@ from noid.core.component import Noid, OidComponent
 
 
 @Noid.component({
-    "id": "slm:console-display",
+    "id": "basic:console-display",
     "properties": {
         "label":       {"default": ""},
         "show_topic":  {"default": False},

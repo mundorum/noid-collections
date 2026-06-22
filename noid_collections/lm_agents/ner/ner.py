@@ -1,5 +1,5 @@
 """
-slm:ner — Named Entity Recognition component backed by HuggingFace Transformers.
+lm:ner — Named Entity Recognition component backed by HuggingFace Transformers.
 
 The NER model can be configured at instantiation time via the `model` property.
 The pipeline is loaded lazily on the first `text` notice and cached for subsequent calls.
@@ -23,7 +23,7 @@ Requires: transformers>=4.40, torch  (pip install transformers torch)
 
 Scene usage example:
   {
-    "type": "slm:ner",
+    "type": "lm:ner",
     "properties": {"model": "samrawal/bert-base-uncased_clinical-ner"},
     "subscribe": "pipeline/text-out~text",
     "publish":   "entities~pipeline/ner-out"
@@ -54,7 +54,7 @@ def _get_pipeline(model: str, aggregation_strategy: str):
 
 
 @Noid.component({
-    "id": "slm:ner",
+    "id": "lm:ner",
     "properties": {
         "model":                {"default": "dslim/bert-base-NER"},
         "aggregation_strategy": {"default": "simple"},
