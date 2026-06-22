@@ -1,5 +1,5 @@
 """Tests for slm:text-source."""
-import pytest
+import asyncio
 
 from noid.core.bus import Bus
 from noid_collections.slm_agents.text_source.text_source import TextSourceOid
@@ -32,6 +32,8 @@ async def test_text_source_auto_publish() -> None:
         properties={"text": "Auto text", "label": "auto", "auto_publish": True},
     )
     await comp.start()
+    # auto_publish fires via create_task — yield once to let the task run
+    await asyncio.sleep(0)
 
     assert received == [{"label": "auto", "content": "Auto text"}]
     await comp.stop()

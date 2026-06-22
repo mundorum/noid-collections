@@ -13,7 +13,7 @@
         "text":         "Hello from the text source!",
         "auto_publish": true
       },
-      "publish": "text~pipeline/text;text~player/done"
+      "publish": "text~pipeline/text;done~player/done"
     },
     {
       "type": "slm:console-display",

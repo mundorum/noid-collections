@@ -23,7 +23,7 @@
         "facts_rules": "human(socrates).\nhuman(plato).\nmortal(X) :- human(X)."
       },
       "subscribe": "pipeline/query-in~query",
-      "publish":   "result~pipeline/result;error~pipeline/result;result~player/done"
+      "publish":   "result~pipeline/result;error~pipeline/result;done~player/done"
     },
     {
       "type": "slm:console-display",

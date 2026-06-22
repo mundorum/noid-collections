@@ -100,7 +100,7 @@ def _run_prolog(program: str, goal: str) -> list:
         "facts_rules": {"default": ""},
     },
     "receive": ["query"],
-    "publish": "result~slm/prolog/result;error~slm/prolog/error",
+    "publish": "result~slm/prolog/result;error~slm/prolog/error;done~slm/prolog/done",
 })
 class PrologAgentOid(OidComponent):
     """Executes a Prolog goal and publishes unified solutions."""
@@ -134,3 +134,4 @@ class PrologAgentOid(OidComponent):
             })
         except Exception as exc:
             await self._notify("error", {"query": goal, "message": str(exc)})
+        await self._notify("done", {})
