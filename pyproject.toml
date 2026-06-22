@@ -5,23 +5,39 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "mundorum-noid-collections"
 version = "0.1.0"
-description = "Reusable noid components — SLM agents and data pipeline building blocks"
+description = "Reusable noid components — SLM agents, PDF pipeline, data, and logic building blocks"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "LGPL-2.1"
 authors = [
-    {name = "André Santanchè"}
+    {name = "André Santanchè", email = "santanche@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
 ]
 
 dependencies = [
-    "mundorum-noid",
+    "mundorum-noid>=0.1.1",
 ]
 
+[project.urls]
+Homepage = "https://github.com/mundorum/noid-collections"
+Repository = "https://github.com/mundorum/noid-collections"
+
 [project.optional-dependencies]
-slm = [
+# Ollama-backed LLM agent (lm:lm-agent) — lightweight
+lm = [
     "ollama>=0.3",
+]
+# HuggingFace NER (lm:ner) — heavy: downloads large model weights
+ner = [
     "transformers>=4.40",
     "torch",
+]
+# Convenience shorthand: both LM sub-extras
+slm = [
+    "mundorum-noid-collections[lm,ner]",
 ]
 sql = [
     "duckdb>=0.10",
@@ -29,9 +45,20 @@ sql = [
 prolog = [
     "pyswip>=0.2.10",
 ]
+# PDF pipeline: extractor-pymupdf, extractor-markitdown, ocr, postprocessor
+pdf = [
+    "pymupdf>=1.24",
+    "markitdown[pdf]>=0.1",
+    "ocrmypdf>=16.0",
+    "symspellpy>=6.7",
+]
 dev = [
     "pytest>=8",
     "pytest-asyncio>=0.23",
+]
+# Install everything
+all = [
+    "mundorum-noid-collections[slm,sql,prolog,pdf]",
 ]
 
 [tool.setuptools.packages.find]
