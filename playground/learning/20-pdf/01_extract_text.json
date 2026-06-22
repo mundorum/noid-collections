@@ -10,7 +10,7 @@
       "type": "pdf:extractor-pymupdf",
       "id":   "extractor",
       "properties": {
-        "input_file":   "playground/learning/20-pdf/unicamp-grad-mc346-2026-1-v01.pdf",
+        "input_file":   "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf",
         "output_mode":  "complete",
         "auto_extract": true
       },
@@ -20,7 +20,7 @@
       "type": "data:file-writer",
       "id":   "writer",
       "properties": {
-        "output_file": "playground/learning/20-pdf/output_01_text.txt"
+        "output_file": "playground/learning/20-pdf/text/ulisses-james-joyce.txt"
       },
       "subscribe": "pipeline/text~text;pipeline/done~done",
       "publish":   "written~player/done"
@@ -29,7 +29,7 @@
       "type": "basic:console-display",
       "id":   "progress",
       "properties": {"label": "Progress", "pretty": false},
-      "subscribe": "pipeline/status~show"
+      "subscribe": "pipeline/status~show;pipeline/error~show"
     }
   ]
 }

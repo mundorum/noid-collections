@@ -67,7 +67,7 @@ class PdfExtractorPyMuPdfOid(OidComponent):
     async def _extract(self, input_file: str) -> None:
         try:
             await self._notify("status", f"Extracting text from {input_file}")
-            pages = await asyncio.to_thread(_read_pages_pymupdf, input_file)
+            pages = _read_pages_pymupdf(input_file)
             total = len(pages)
             if self.output_mode == "page_by_page":
                 for page_num, text in pages:

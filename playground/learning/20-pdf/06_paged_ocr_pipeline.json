@@ -1,0 +1,57 @@
+{
+  "title": "Full PDF pipeline — OCR → PyMuPDF → postprocess → file (run from project root)",
+  "imports": [
+    "../../../noid_collections/pdf/ocr/ocr.py",
+    "../../../noid_collections/pdf/extractor_pymupdf/extractor_pymupdf.py",
+    "../../../noid_collections/pdf/postprocessor/postprocessor.py",
+    "../../../noid_collections/data/file_writer/file_writer.py",
+    "../../../noid_collections/basic/console_display/console_display.py"
+  ],
+  "components": [
+    {
+      "type": "pdf:ocr",
+      "id":   "ocr",
+      "properties": {
+        "input_file": "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "auto_start": true
+      },
+      "publish": "done~pipeline/ocr-done;error~pipeline/error;status~pipeline/status"
+    },
+    {
+      "type": "pdf:extractor-pymupdf",
+      "id":   "extractor",
+      "properties": {
+        "output_mode":  "page_by_page"
+      },
+      "subscribe": "pipeline/ocr-done~extract",
+      "publish":   "page~pipeline/extract-page;done~pipeline/extract-done;status~pipeline/status"
+    },
+    {
+      "type": "pdf:postprocessor",
+      "id":   "postproc",
+      "properties": {
+        "source": "pymupdf",
+        "format": "markdown",
+        "output_mode":  "page_by_page"
+      },
+      "subscribe": "pipeline/extract-page~page;pipeline/extract-done~done",
+      "publish":   "page~pipeline/clean-page;done~pipeline/clean-done;status~pipeline/status"
+    },
+    {
+      "type": "data:file-writer",
+      "id":   "writer",
+      "properties": {
+        "output_file": "playground/learning/20-pdf/output_05_ocr_markdown.md",
+        "page_separator": "\n\n"
+      },
+      "subscribe": "pipeline/clean-page~page;pipeline/clean-done~done",
+      "publish":   "written~player/done"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "progress",
+      "properties": {"label": "Progress", "pretty": false},
+      "subscribe": "pipeline/status~show;pipeline/error~show"
+    }
+  ]
+}

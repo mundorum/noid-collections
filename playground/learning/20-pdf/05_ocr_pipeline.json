@@ -46,7 +46,7 @@
       "type": "basic:console-display",
       "id":   "progress",
       "properties": {"label": "Progress", "pretty": false},
-      "subscribe": "pipeline/status~show"
+      "subscribe": "pipeline/status~show;pipeline/error~show"
     }
   ]
 }

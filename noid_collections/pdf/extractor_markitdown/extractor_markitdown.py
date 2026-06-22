@@ -68,7 +68,7 @@ class PdfExtractorMarkItDownOid(OidComponent):
     async def _extract(self, input_file: str) -> None:
         try:
             await self._notify("status", f"MarkItDown conversion starting — {input_file}")
-            content = await asyncio.to_thread(_convert_markitdown, input_file)
+            content = _convert_markitdown(input_file)
             if self.output_mode == "page_by_page":
                 await self._notify("page", {
                     "file":    input_file,

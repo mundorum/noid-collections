@@ -74,20 +74,16 @@ class PdfOcrOid(OidComponent):
                 fd, output_file = tempfile.mkstemp(suffix="_ocr.pdf")
                 os.close(fd)
             await self._notify("status", f"OCR starting — {input_file}")
-            lang = self.language
-            deskew = self.deskew
-            rotate = self.rotate_pages
-            force = self.force_ocr
-            await asyncio.to_thread(lambda: ocrmypdf.ocr(
+            ocrmypdf.ocr(
                 input_file=input_file,
                 output_file=output_file,
-                language=lang,
-                deskew=deskew,
-                rotate_pages=rotate,
-                force_ocr=force,
+                language=self.language,
+                deskew=self.deskew,
+                rotate_pages=self.rotate_pages,
+                force_ocr=self.force_ocr,
                 optimize=1,
                 progress_bar=False,
-            ))
+            )
             await self._notify("status", f"OCR complete — {output_file}")
             await self._notify("done", {"file": output_file})
         except Exception as exc:
