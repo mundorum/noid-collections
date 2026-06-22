@@ -272,6 +272,7 @@ def postprocess_markdown(text: str, use_spellcheck: bool = True) -> Tuple[str, d
         ";page~pdf/processed/page"
         ";done~pdf/processed/done"
         ";error~pdf/processed/error"
+        ";status~pdf/postprocessor/status"
     ),
 })
 class PdfPostprocessorOid(OidComponent):
@@ -285,12 +286,16 @@ class PdfPostprocessorOid(OidComponent):
     async def handle_text(self, notice: str, message: dict) -> None:
         self._source_file = (message or {}).get("file", "") or self._source_file
         self._buffer.append((message or {}).get("content", ""))
+        await self._notify("status", "Post-processor received complete text")
 
     async def handle_page(self, notice: str, message: dict) -> None:
         self._source_file = (message or {}).get("file", "") or self._source_file
         self._buffer.append((message or {}).get("content", ""))
+        await self._notify("status", f"Post-processor buffering page {len(self._buffer)}")
 
     async def handle_done(self, notice: str, message: dict) -> None:
+        n = len(self._buffer)
+        await self._notify("status", f"Post-processing {n} segment(s)...")
         full_text = "\n\n".join(self._buffer)
         self._buffer = []
         try:
@@ -316,12 +321,14 @@ class PdfPostprocessorOid(OidComponent):
             pages = self._split_pages(text)
             total = len(pages)
             for i, content in enumerate(pages, 1):
+                await self._notify("status", f"Post-processing: publishing page {i} / {total}")
                 await self._notify("page", {
                     "file":    self._source_file,
                     "page":    i,
                     "total":   total,
                     "content": content,
                 })
+            await self._notify("status", f"Post-processing complete — {total} pages")
             await self._notify("done", {
                 "file":  self._source_file,
                 "pages": total,
@@ -331,6 +338,7 @@ class PdfPostprocessorOid(OidComponent):
                 "file":    self._source_file,
                 "content": text,
             })
+            await self._notify("status", "Post-processing complete")
             await self._notify("done", {"file": self._source_file})
 
     def _split_pages(self, text: str) -> List[str]:

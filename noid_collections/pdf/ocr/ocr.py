@@ -52,7 +52,7 @@ from noid.core.component import Noid, OidComponent
         "auto_start":   {"default": False},
     },
     "receive": ["ocr"],
-    "publish": "done~pdf/ocr/done;error~pdf/ocr/error",
+    "publish": "done~pdf/ocr/done;error~pdf/ocr/error;status~pdf/ocr/status",
 })
 class PdfOcrOid(OidComponent):
     """Runs OCRmyPDF on a PDF file; publishes done with the output path."""
@@ -73,6 +73,7 @@ class PdfOcrOid(OidComponent):
             if not output_file:
                 fd, output_file = tempfile.mkstemp(suffix="_ocr.pdf")
                 os.close(fd)
+            await self._notify("status", f"OCR starting — {input_file}")
             lang = self.language
             deskew = self.deskew
             rotate = self.rotate_pages
@@ -87,6 +88,7 @@ class PdfOcrOid(OidComponent):
                 optimize=1,
                 progress_bar=False,
             ))
+            await self._notify("status", f"OCR complete — {output_file}")
             await self._notify("done", {"file": output_file})
         except Exception as exc:
             await self._notify("error", {"error": str(exc), "file": input_file})

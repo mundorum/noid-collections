@@ -15,13 +15,7 @@
         "output_mode":  "page_by_page",
         "auto_extract": true
       },
-      "publish": "page~pipeline/page;done~pipeline/done"
-    },
-    {
-      "type": "basic:console-display",
-      "id":   "progress",
-      "properties": {"label": "Extracting"},
-      "subscribe": "pipeline/page~show"
+      "publish": "page~pipeline/page;done~pipeline/done;status~pipeline/status"
     },
     {
       "type": "pdf:postprocessor",
@@ -32,7 +26,7 @@
         "output_mode": "page_by_page"
       },
       "subscribe": "pipeline/page~page;pipeline/done~done",
-      "publish":   "page~pipeline/clean-page;done~pipeline/clean-done"
+      "publish":   "page~pipeline/clean-page;done~pipeline/clean-done;status~pipeline/status"
     },
     {
       "type": "data:file-writer",
@@ -43,6 +37,12 @@
       },
       "subscribe": "pipeline/clean-page~page;pipeline/clean-done~done",
       "publish":   "written~player/done"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "progress",
+      "properties": {"label": "Progress", "pretty": false},
+      "subscribe": "pipeline/status~show"
     }
   ]
 }

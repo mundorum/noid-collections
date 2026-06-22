@@ -2,18 +2,19 @@
   "title": "PDF text extraction — PyMuPDF → file (run from project root)",
   "imports": [
     "../../../noid_collections/pdf/extractor_pymupdf/extractor_pymupdf.py",
-    "../../../noid_collections/data/file_writer/file_writer.py"
+    "../../../noid_collections/data/file_writer/file_writer.py",
+    "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
     {
       "type": "pdf:extractor-pymupdf",
       "id":   "extractor",
       "properties": {
-        "input_file":   "playground/learning/20-pdf/case_teaching_in_medicine_1906.pdf",
+        "input_file":   "playground/learning/20-pdf/unicamp-grad-mc346-2026-1-v01.pdf",
         "output_mode":  "complete",
         "auto_extract": true
       },
-      "publish": "text~pipeline/text;done~pipeline/done;error~pipeline/error"
+      "publish": "text~pipeline/text;done~pipeline/done;error~pipeline/error;status~pipeline/status"
     },
     {
       "type": "data:file-writer",
@@ -23,6 +24,12 @@
       },
       "subscribe": "pipeline/text~text;pipeline/done~done",
       "publish":   "written~player/done"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "progress",
+      "properties": {"label": "Progress", "pretty": false},
+      "subscribe": "pipeline/status~show"
     }
   ]
 }

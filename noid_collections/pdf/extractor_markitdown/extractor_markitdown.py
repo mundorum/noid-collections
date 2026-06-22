@@ -51,7 +51,7 @@ from noid.core.component import Noid, OidComponent
         "auto_extract": {"default": False},
     },
     "receive": ["extract"],
-    "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error",
+    "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
 })
 class PdfExtractorMarkItDownOid(OidComponent):
     """Extracts text from a PDF using MarkItDown; publishes complete markdown content."""
@@ -67,6 +67,7 @@ class PdfExtractorMarkItDownOid(OidComponent):
 
     async def _extract(self, input_file: str) -> None:
         try:
+            await self._notify("status", f"MarkItDown conversion starting — {input_file}")
             content = await asyncio.to_thread(_convert_markitdown, input_file)
             if self.output_mode == "page_by_page":
                 await self._notify("page", {
@@ -75,12 +76,14 @@ class PdfExtractorMarkItDownOid(OidComponent):
                     "total":   1,
                     "content": content,
                 })
+                await self._notify("status", "MarkItDown conversion complete — 1 page")
             else:
                 await self._notify("text", {
                     "file":    input_file,
                     "content": content,
                     "pages":   None,
                 })
+                await self._notify("status", "MarkItDown conversion complete")
             await self._notify("done", {"file": input_file, "pages": None})
         except ImportError:
             await self._notify("error", {

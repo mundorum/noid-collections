@@ -50,7 +50,7 @@ from noid.core.component import Noid, OidComponent
         "auto_extract": {"default": False},
     },
     "receive": ["extract"],
-    "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error",
+    "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
 })
 class PdfExtractorPyMuPdfOid(OidComponent):
     """Extracts raw text from a PDF page by page using PyMuPDF."""
@@ -66,6 +66,7 @@ class PdfExtractorPyMuPdfOid(OidComponent):
 
     async def _extract(self, input_file: str) -> None:
         try:
+            await self._notify("status", f"Extracting text from {input_file}")
             pages = await asyncio.to_thread(_read_pages_pymupdf, input_file)
             total = len(pages)
             if self.output_mode == "page_by_page":
@@ -76,6 +77,7 @@ class PdfExtractorPyMuPdfOid(OidComponent):
                         "total":   total,
                         "content": f"--- PAGE {page_num} ---\n\n{text.strip()}",
                     })
+                    await self._notify("status", f"Extracted page {page_num} / {total}")
             else:
                 full_text = "\n\n".join(
                     f"--- PAGE {n} ---\n\n{t.strip()}" for n, t in pages
@@ -85,6 +87,7 @@ class PdfExtractorPyMuPdfOid(OidComponent):
                     "content": full_text,
                     "pages":   total,
                 })
+            await self._notify("status", f"Extraction complete — {total} pages")
             await self._notify("done", {"file": input_file, "pages": total})
         except Exception as exc:
             await self._notify("error", {"error": str(exc), "file": input_file})
