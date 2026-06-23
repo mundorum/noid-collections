@@ -21,7 +21,7 @@
       "id":   "lm",
       "properties": {
         "model":           "llama3.2:3b",
-        "prompt_template": "Given this patient data: {input}\nWhat might be the diagnosis? Answer in one sentence."
+        "prompt_template": "Given this patient data: {row}\nWhat might be the diagnosis? Answer in one sentence."
       },
       "subscribe": "pipeline/row~input",
       "publish":   "output~pipeline/lm-out"
