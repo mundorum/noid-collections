@@ -30,7 +30,8 @@
       "type": "basic:console-display",
       "id":   "ner-display",
       "properties": {"label": "NER Entities"},
-      "subscribe": "pipeline/ner-out~show"
+      "subscribe": "pipeline/ner-out~show",
+      "publish":   "output~pipeline/prolog-in"
     },
     {
       "type": "logic:prolog",
@@ -45,7 +46,8 @@
       "type": "basic:console-display",
       "id":   "prolog-display",
       "properties": {"label": "Prolog Result"},
-      "subscribe": "pipeline/prolog-out~show"
+      "subscribe": "pipeline/prolog-out~show",
+      "publish":   "output~player/done"
     }
   ]
 }

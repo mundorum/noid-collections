@@ -29,11 +29,12 @@ from noid.core.component import Noid, OidComponent
         "pretty":      {"default": True},
     },
     "receive": ["show"],
+    "publish": "output~console/output",
 })
 class ConsoleDisplayOid(OidComponent):
     """Prints every received message to stdout."""
 
-    def handle_show(self, notice: str, message) -> None:
+    async def handle_show(self, notice: str, message) -> None:
         prefix = f"[{self.label}] " if self.label else ""
         if self.show_topic:
             prefix = f"{prefix}({notice}) "
@@ -44,3 +45,4 @@ class ConsoleDisplayOid(OidComponent):
             body = str(message)
 
         print(f"{prefix}{body}")
+        await self._notify("output", message)

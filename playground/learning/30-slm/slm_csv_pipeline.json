@@ -20,17 +20,18 @@
       "type": "lm:lm-agent",
       "id":   "lm",
       "properties": {
-        "model":           "llama3.2",
+        "model":           "llama3.2:3b",
         "prompt_template": "Given this patient data: {input}\nWhat might be the diagnosis? Answer in one sentence."
       },
       "subscribe": "pipeline/row~input",
-      "publish":   "output~pipeline/lm-out;output~pipeline/next"
+      "publish":   "output~pipeline/lm-out"
     },
     {
       "type": "basic:console-display",
       "id":   "display",
       "properties": {"label": "Diagnosis"},
-      "subscribe": "pipeline/lm-out~show"
+      "subscribe": "pipeline/lm-out~show",
+      "publish":   "output~pipeline/next"
     }
   ]
 }
