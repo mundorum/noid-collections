@@ -1,0 +1,56 @@
+# requirements.txt — all optional packages for noid-collections (run-from-source)
+#
+# The core framework is the only hard dependency. Every other package below is
+# loaded lazily and is only needed if you use the corresponding component.
+# Install only what you need, or install everything at once:
+#
+#   pip install -e ".[all]"       # via pyproject.toml extras (recommended)
+#   pip install -r requirements.txt  # install every optional package at once
+
+
+# ── Core framework (required by all components) ──────────────────────────────
+mundorum-noid>=0.1.1
+
+
+# ── lm:lm-agent  (noid_collections/lm_agents/lm/lm.py) ──────────────────────
+# Lightweight HTTP client that talks to a running Ollama server.
+# Does NOT install the Ollama server itself.
+ollama>=0.3
+
+
+# ── lm:ner  (noid_collections/lm_agents/ner/ner.py) ─────────────────────────
+# HuggingFace NER pipeline. Warning: downloads large model weights on first use.
+transformers>=4.40
+torch
+
+
+# ── data:sql  (noid_collections/data/sql/sql.py) ─────────────────────────────
+# DuckDB backend. The SQLite backend uses the stdlib sqlite3 — no extra install.
+duckdb>=0.10
+
+
+# ── logic:prolog  (noid_collections/logic/prolog/prolog.py) ──────────────────
+# Python bindings for SWI-Prolog. Requires SWI-Prolog installed on the system.
+pyswip>=0.2.10
+
+
+# ── pdf:extractor-pymupdf  (noid_collections/pdf/extractor_pymupdf/) ─────────
+pymupdf>=1.24
+
+
+# ── pdf:extractor-markitdown  (noid_collections/pdf/extractor_markitdown/) ───
+markitdown[pdf]>=0.1
+
+
+# ── pdf:ocr  (noid_collections/pdf/ocr/ocr.py) ───────────────────────────────
+# Also requires Ghostscript and Tesseract installed on the system.
+ocrmypdf>=16.0
+
+
+# ── pdf:postprocessor  (noid_collections/pdf/postprocessor/postprocessor.py) ─
+symspellpy>=6.7
+
+
+# ── Development / testing ─────────────────────────────────────────────────────
+pytest>=8
+pytest-asyncio>=0.23
