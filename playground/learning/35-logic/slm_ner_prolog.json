@@ -11,10 +11,10 @@
       "type": "data:text-source",
       "id":   "src",
       "properties": {
-        "label":        "clinical-note",
-        "text":         "The patient Alice has fever and cough. She lives in São Paulo.",
-        "auto_publish": true
+        "label": "clinical-note",
+        "text":  "The patient Alice has fever and cough. She lives in São Paulo."
       },
+      "subscribe": "player/start~trigger",
       "publish": "text~pipeline/text-in"
     },
     {

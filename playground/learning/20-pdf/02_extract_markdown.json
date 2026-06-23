@@ -11,9 +11,9 @@
       "type": "pdf:extractor-pymupdf",
       "id":   "extractor",
       "properties": {
-        "input_file":   "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf",
-        "auto_extract": true
+        "input_file": "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf"
       },
+      "subscribe": "player/start~extract",
       "publish": "text~pipeline/text;done~pipeline/done;status~pipeline/status"
     },
     {

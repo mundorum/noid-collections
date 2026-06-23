@@ -13,7 +13,7 @@
         "label":   "patients",
         "content": "name,age,symptoms\nAlice,30,fever cough\nBob,25,headache fatigue\nCarol,45,chest pain shortness of breath"
       },
-      "subscribe": "pipeline/start~first;pipeline/next~next",
+      "subscribe": "player/start~first;pipeline/next~next",
       "publish":   "row~pipeline/row;exhausted~player/done"
     },
     {

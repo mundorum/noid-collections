@@ -10,10 +10,10 @@
       "type": "data:text-source",
       "id":   "trigger",
       "properties": {
-        "label":        "query",
-        "text":         "mortal(X)",
-        "auto_publish": true
+        "label": "query",
+        "text":  "mortal(X)"
       },
+      "subscribe": "player/start~trigger",
       "publish": "text~pipeline/query-in"
     },
     {

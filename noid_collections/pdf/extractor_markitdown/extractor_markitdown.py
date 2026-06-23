@@ -6,9 +6,8 @@ flowing Markdown-style text. This component wraps that conversion as a noid
 component, mirroring the interface of pdf:extractor-pymupdf so the two are
 interchangeable in scene pipelines.
 
-Triggered by an `extract` notice (or at start when auto_extract is True).
-The input file can be set via the input_file property or overridden in the
-triggering message as {"file": "path"}.
+Triggered by an `extract` notice. The input file can be set via the
+input_file property or overridden in the triggering message as {"file": "path"}.
 
 When output_mode is "page_by_page" the entire converted text is published as
 a single `page` notice (MarkItDown has no page boundary information), followed
@@ -17,9 +16,8 @@ by `done`.
 Requires: pip install "markitdown[pdf]"
 
 Properties:
-    input_file   — path to the PDF file (overridden by message "file" key)
-    output_mode  — "complete" (default) or "page_by_page"
-    auto_extract — begin extraction immediately on start (default: False)
+    input_file  — path to the PDF file (overridden by message "file" key)
+    output_mode — "complete" (default) or "page_by_page"
 
 Published notices:
     text  — {"file", "content": "<markdown text>", "pages": null}   (complete mode)
@@ -32,9 +30,9 @@ Scene usage:
       "type": "pdf:extractor-markitdown",
       "id":   "extractor",
       "properties": {
-        "input_file":  "document.pdf",
-        "auto_extract": true
+        "input_file": "document.pdf"
       },
+      "subscribe": "player/start~extract",
       "publish": "text~pipeline/text;done~pipeline/done;error~pipeline/error"
     }
 """
@@ -46,20 +44,14 @@ from noid.core.component import Noid, OidComponent
 @Noid.component({
     "id": "pdf:extractor-markitdown",
     "properties": {
-        "input_file":   {"default": ""},
-        "output_mode":  {"default": "complete"},
-        "auto_extract": {"default": False},
+        "input_file":  {"default": ""},
+        "output_mode": {"default": "complete"},
     },
     "receive": ["extract"],
     "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
 })
 class PdfExtractorMarkItDownOid(OidComponent):
     """Extracts text from a PDF using MarkItDown; publishes complete markdown content."""
-
-    async def start(self) -> None:
-        await super().start()
-        if self.auto_extract:
-            asyncio.create_task(self._extract(self.input_file))
 
     async def handle_extract(self, notice: str, message: dict) -> None:
         input_file = (message or {}).get("file", "") or self.input_file

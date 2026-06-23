@@ -11,10 +11,10 @@
       "type": "pdf:extractor-pymupdf",
       "id":   "extractor",
       "properties": {
-        "input_file":   "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf",
-        "output_mode":  "page_by_page",
-        "auto_extract": true
+        "input_file":  "playground/learning/20-pdf/pdf/ulisses_james_joyce.pdf",
+        "output_mode": "page_by_page"
       },
+      "subscribe": "player/start~extract",
       "publish": "page~pipeline/page;done~pipeline/done;status~pipeline/status"
     },
     {

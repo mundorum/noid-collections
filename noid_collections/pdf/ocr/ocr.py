@@ -1,9 +1,8 @@
 """
 pdf:ocr — apply OCR to a PDF file using OCRmyPDF.
 
-Triggered by an `ocr` notice (or at start when auto_start is True).
-The input file can be set via the input_file property or overridden
-in the triggering message as {"file": "path"}.
+Triggered by an `ocr` notice. The input file can be set via the input_file
+property or overridden in the triggering message as {"file": "path"}.
 A temporary output file is created unless output_file is explicitly set.
 
 Publishes `done` with {"file": "<output_path>"} on success,
@@ -16,7 +15,6 @@ Properties:
     deskew       — correct skewed pages (default: True)
     rotate_pages — auto-rotate pages by content (default: True)
     force_ocr    — OCR even if text layer already exists (default: True)
-    auto_start   — begin OCR immediately on component start (default: False)
 
 Published notices:
     done  — {"file": "<output_path>"}
@@ -27,9 +25,9 @@ Scene usage:
       "type": "pdf:ocr",
       "id":   "ocr",
       "properties": {
-        "input_file": "document.pdf",
-        "auto_start": true
+        "input_file": "document.pdf"
       },
+      "subscribe": "player/start~ocr",
       "publish": "done~pipeline/ocr-done;error~pipeline/error"
     }
 """
@@ -49,18 +47,12 @@ from noid.core.component import Noid, OidComponent
         "deskew":       {"default": True},
         "rotate_pages": {"default": True},
         "force_ocr":    {"default": True},
-        "auto_start":   {"default": False},
     },
     "receive": ["ocr"],
     "publish": "done~pdf/ocr/done;error~pdf/ocr/error;status~pdf/ocr/status",
 })
 class PdfOcrOid(OidComponent):
     """Runs OCRmyPDF on a PDF file; publishes done with the output path."""
-
-    async def start(self) -> None:
-        await super().start()
-        if self.auto_start:
-            asyncio.create_task(self._run_ocr(self.input_file))
 
     async def handle_ocr(self, notice: str, message: dict) -> None:
         input_file = (message or {}).get("file", "") or self.input_file

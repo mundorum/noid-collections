@@ -1,10 +1,10 @@
 """
 pdf:extractor-pymupdf — extract raw text from a PDF using PyMuPDF (fitz).
 
-Triggered by an `extract` notice (or at start when auto_extract is True).
-The input file can be set via the input_file property or overridden in the
-triggering message as {"file": "path"} — which is the format published by
-pdf:ocr's `done` notice, enabling direct chaining.
+Triggered by an `extract` notice. The input file can be set via the
+input_file property or overridden in the triggering message as
+{"file": "path"} — which is the format published by pdf:ocr's `done` notice,
+enabling direct chaining.
 
 Each page is extracted with PyMuPDF's get_text("text") and wrapped in a
 "--- PAGE N ---" header. Raw text (no cleanup) is published so it can be
@@ -15,9 +15,8 @@ output_mode controls the dispatch:
     "page_by_page" — one `page` notice per page (in extraction order), then `done`
 
 Properties:
-    input_file   — path to the PDF file (overridden by message "file" key)
-    output_mode  — "complete" (default) or "page_by_page"
-    auto_extract — begin extraction immediately on start (default: False)
+    input_file  — path to the PDF file (overridden by message "file" key)
+    output_mode — "complete" (default) or "page_by_page"
 
 Published notices:
     text  — {"file", "content": "<full text>", "pages": N}          (complete mode)
@@ -31,34 +30,27 @@ Scene usage:
       "id":   "extractor",
       "properties": {
         "input_file":  "document.pdf",
-        "output_mode": "page_by_page",
-        "auto_extract": true
+        "output_mode": "page_by_page"
       },
+      "subscribe": "player/start~extract",
       "publish": "page~pipeline/page;done~pipeline/done;error~pipeline/error"
     }
 """
 import asyncio
-
 from noid.core.component import Noid, OidComponent
 
 
 @Noid.component({
     "id": "pdf:extractor-pymupdf",
     "properties": {
-        "input_file":   {"default": ""},
-        "output_mode":  {"default": "complete"},
-        "auto_extract": {"default": False},
+        "input_file":  {"default": ""},
+        "output_mode": {"default": "complete"},
     },
     "receive": ["extract"],
     "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
 })
 class PdfExtractorPyMuPdfOid(OidComponent):
     """Extracts raw text from a PDF page by page using PyMuPDF."""
-
-    async def start(self) -> None:
-        await super().start()
-        if self.auto_extract:
-            asyncio.create_task(self._extract(self.input_file))
 
     async def handle_extract(self, notice: str, message: dict) -> None:
         input_file = (message or {}).get("file", "") or self.input_file

@@ -9,10 +9,10 @@
       "type": "data:text-source",
       "id":   "src",
       "properties": {
-        "label":        "greeting",
-        "text":         "Hello from the text source!",
-        "auto_publish": true
+        "label": "greeting",
+        "text":  "Hello from the text source!"
       },
+      "subscribe": "player/start~trigger",
       "publish": "text~pipeline/text;done~player/done"
     },
     {

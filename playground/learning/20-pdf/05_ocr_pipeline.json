@@ -12,9 +12,9 @@
       "type": "pdf:ocr",
       "id":   "ocr",
       "properties": {
-        "input_file": "playground/learning/20-pdf/pdf/case_teaching_in_medicine_1906.pdf",
-        "auto_start": true
+        "input_file": "playground/learning/20-pdf/pdf/case_teaching_in_medicine_1906.pdf"
       },
+      "subscribe": "player/start~ocr",
       "publish": "done~pipeline/ocr-done;error~pipeline/error;status~pipeline/status"
     },
     {

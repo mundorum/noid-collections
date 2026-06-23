@@ -10,10 +10,10 @@
       "type": "data:text-source",
       "id":   "src",
       "properties": {
-        "label":        "question",
-        "text":         "What is the capital of France?",
-        "auto_publish": true
+        "label": "question",
+        "text":  "What is the capital of France?"
       },
+      "subscribe": "player/start~trigger",
       "publish": "text~pipeline/input"
     },
     {
