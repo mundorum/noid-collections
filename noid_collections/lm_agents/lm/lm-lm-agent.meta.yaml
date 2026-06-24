@@ -1,0 +1,29 @@
+id: lm:lm-agent
+name: LM Agent
+description: Calls an Ollama LLM with a rendered prompt template and publishes the
+  reply.
+properties:
+  model:
+    description: Ollama model name to use for inference.
+    default: llama3.2
+    required: false
+  host:
+    description: Ollama server URL.
+    default: http://localhost:11434
+    required: false
+  prompt_template:
+    description: Prompt template. Supports {input}, {question}, and any message key
+      as {placeholder} substitutions.
+    default: '{input}'
+    required: false
+  temperature:
+    description: Sampling temperature (0 = deterministic, higher = more creative).
+    default: 0.1
+    required: false
+input_notices:
+  input:
+    description: 'Triggers LLM inference. Payload keys: content (str), question (str,
+      optional). Also accepts a plain string.'
+output_notices:
+  output:
+    description: 'LLM reply. Payload keys: content (str), model (str).'

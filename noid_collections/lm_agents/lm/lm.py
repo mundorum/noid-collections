@@ -13,14 +13,43 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "lm:lm-agent",
+    "name": "LM Agent",
+    "description": "Calls an Ollama LLM with a rendered prompt template and publishes the reply.",
     "properties": {
-        "model":           {"default": "llama3.2"},
-        "host":            {"default": "http://localhost:11434"},
-        "prompt_template": {"default": "{input}"},
-        "temperature":     {"default": 0.1},
+        "model": {
+            "default": "llama3.2",
+            "description": "Ollama model name to use for inference.",
+        },
+        "host": {
+            "default": "http://localhost:11434",
+            "description": "Ollama server URL.",
+        },
+        "prompt_template": {
+            "default": "{input}",
+            "description": (
+                "Prompt template. Supports {input}, {question}, and any message "
+                "key as {placeholder} substitutions."
+            ),
+        },
+        "temperature": {
+            "default": 0.1,
+            "description": "Sampling temperature (0 = deterministic, higher = more creative).",
+        },
     },
-    "receive": ["input"],
+    "receive": {
+        "input": {
+            "description": (
+                "Triggers LLM inference. Payload keys: content (str), "
+                "question (str, optional). Also accepts a plain string."
+            ),
+        },
+    },
     "publish": "output~lm/lm/output",
+    "output_notices": {
+        "output": {
+            "description": "LLM reply. Payload keys: content (str), model (str).",
+        },
+    },
 })
 class LMAgentOid(OidComponent):
     """Calls an Ollama model with a rendered prompt and publishes the reply."""

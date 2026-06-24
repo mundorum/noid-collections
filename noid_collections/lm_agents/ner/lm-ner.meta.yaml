@@ -1,0 +1,22 @@
+id: lm:ner
+name: NER Agent
+description: Runs a HuggingFace NER pipeline on input text and publishes recognized
+  entities. The pipeline is loaded lazily on the first notice and cached for subsequent
+  calls.
+properties:
+  model:
+    description: HuggingFace model id for the NER pipeline.
+    default: dslim/bert-base-NER
+    required: false
+  aggregation_strategy:
+    description: 'Entity aggregation strategy: simple, first, average, or max.'
+    default: simple
+    required: false
+input_notices:
+  text:
+    description: 'Input text to analyze. Payload key: content (str). Also accepts
+      a plain string.'
+output_notices:
+  entities:
+    description: 'Recognized entities. Payload keys: text (str, original input), entities
+      (list of {text, entity_type, start, end, score}).'

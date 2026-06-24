@@ -1,0 +1,39 @@
+id: pdf:ocr
+name: PDF OCR
+description: Applies OCR to a PDF file using OCRmyPDF and publishes the path to the
+  output file.
+properties:
+  input_file:
+    description: Path to the input PDF. Can be overridden by the ocr notice payload.
+    default: ''
+    required: false
+  output_file:
+    description: Path for the OCR'd output PDF. If empty, a temporary file is created.
+    default: ''
+    required: false
+  language:
+    description: Tesseract language code (e.g. eng, por, fra).
+    default: eng
+    required: false
+  deskew:
+    description: Correct skewed pages before OCR.
+    default: true
+    required: false
+  rotate_pages:
+    description: Auto-rotate pages based on content orientation.
+    default: true
+    required: false
+  force_ocr:
+    description: OCR even if a text layer already exists in the PDF.
+    default: true
+    required: false
+input_notices:
+  ocr:
+    description: Trigger OCR. Payload key file (str) overrides the input_file property.
+output_notices:
+  done:
+    description: 'OCR complete. Payload key: file (str) — path to the output PDF.'
+  error:
+    description: 'OCR failed. Keys: error (str), file (str) — input path.'
+  status:
+    description: Progress message string emitted during OCR.

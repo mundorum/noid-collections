@@ -55,17 +55,46 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
 
 @Noid.component({
     "id": "data:csv-source",
+    "name": "CSV Source",
+    "description": (
+        "Reads a CSV string and publishes its data in full-table mode "
+        "or row-by-row mode with a movable cursor."
+    ),
     "properties": {
-        "content": {"default": ""},
-        "label":   {"default": "csv"},
+        "content": {
+            "default": "",
+            "description": "CSV text, including a header row as the first line.",
+        },
+        "label": {
+            "default": "csv",
+            "description": "Label included in every published payload to identify this source.",
+        },
     },
-    "receive": ["table", "first", "next"],
-    "publish":  (
+    "receive": {
+        "table": {"description": "Publish the entire CSV as a structured table."},
+        "first": {"description": "Reset the row cursor; publish schema then the first row."},
+        "next":  {"description": "Advance the cursor; publish the next row, or exhausted if none remain."},
+    },
+    "publish": (
         "table~slm/csv/table"
         ";schema~slm/csv/schema"
         ";row~slm/csv/row"
         ";exhausted~slm/csv/exhausted"
     ),
+    "output_notices": {
+        "table": {
+            "description": "Full table payload. Keys: label, columns (list of str), rows (list of dicts).",
+        },
+        "schema": {
+            "description": "Column names only. Keys: label, columns (list of str). Emitted before the first row.",
+        },
+        "row": {
+            "description": "One data row. Keys: label, index (int), row (dict).",
+        },
+        "exhausted": {
+            "description": "All rows have been served. Key: label.",
+        },
+    },
 })
 class CsvSourceOid(OidComponent):
     """CSV reader that serves the complete table or rows one at a time."""

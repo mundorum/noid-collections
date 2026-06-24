@@ -1,0 +1,33 @@
+id: pdf:extractor-pymupdf
+name: PDF Extractor PyMuPDF
+description: Extracts raw text from a PDF page by page using PyMuPDF, wrapping each
+  page in a '--- PAGE N ---' header. Interchangeable with pdf:extractor-markitdown
+  in scene pipelines.
+properties:
+  input_file:
+    description: Path to the PDF to extract. Can be overridden by the extract notice
+      payload.
+    default: ''
+    required: false
+  output_mode:
+    description: 'Dispatch mode: complete (one text notice with all pages joined)
+      or page_by_page (one page notice per page).'
+    default: complete
+    required: false
+input_notices:
+  extract:
+    description: Trigger text extraction. Payload key file (str) overrides the input_file
+      property.
+output_notices:
+  text:
+    description: 'All pages joined (complete mode). Keys: file (str), content (str),
+      pages (int).'
+  page:
+    description: 'One extracted page (page_by_page mode). Keys: file, page (int),
+      total (int), content (str).'
+  done:
+    description: 'Extraction complete. Keys: file (str), pages (int).'
+  error:
+    description: 'Extraction failed. Keys: file (str), error (str).'
+  status:
+    description: Progress message string emitted during extraction.

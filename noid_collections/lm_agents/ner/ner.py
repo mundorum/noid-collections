@@ -55,12 +55,38 @@ def _get_pipeline(model: str, aggregation_strategy: str):
 
 @Noid.component({
     "id": "lm:ner",
+    "name": "NER Agent",
+    "description": (
+        "Runs a HuggingFace NER pipeline on input text and publishes recognized entities. "
+        "The pipeline is loaded lazily on the first notice and cached for subsequent calls."
+    ),
     "properties": {
-        "model":                {"default": "dslim/bert-base-NER"},
-        "aggregation_strategy": {"default": "simple"},
+        "model": {
+            "default": "dslim/bert-base-NER",
+            "description": "HuggingFace model id for the NER pipeline.",
+        },
+        "aggregation_strategy": {
+            "default": "simple",
+            "description": "Entity aggregation strategy: simple, first, average, or max.",
+        },
     },
-    "receive": ["text"],
+    "receive": {
+        "text": {
+            "description": (
+                "Input text to analyze. Payload key: content (str). "
+                "Also accepts a plain string."
+            ),
+        },
+    },
     "publish": "entities~slm/ner/output",
+    "output_notices": {
+        "entities": {
+            "description": (
+                "Recognized entities. Payload keys: text (str, original input), "
+                "entities (list of {text, entity_type, start, end, score})."
+            ),
+        },
+    },
 })
 class NERAgentOid(OidComponent):
     """Runs a HuggingFace NER pipeline and publishes recognized entities."""

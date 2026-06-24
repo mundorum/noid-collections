@@ -47,14 +47,46 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "data:file-writer",
+    "name": "File Writer",
+    "description": (
+        "Buffers incoming text or page notices and writes them to a file "
+        "when a done notice is received."
+    ),
     "properties": {
-        "output_file":    {"default": ""},
-        "encoding":       {"default": "utf-8"},
-        "append":         {"default": False},
-        "page_separator": {"default": "\n\n"},
+        "output_file": {
+            "default": "",
+            "description": "Destination file path (required).",
+        },
+        "encoding": {
+            "default": "utf-8",
+            "description": "File encoding.",
+        },
+        "append": {
+            "default": False,
+            "description": "Append to an existing file instead of overwriting.",
+        },
+        "page_separator": {
+            "default": "\n\n",
+            "description": "Text inserted between accumulated page segments.",
+        },
     },
-    "receive": ["text", "page", "done"],
+    "receive": {
+        "text": {
+            "description": "Complete text content. Buffered until done. Payload key: content (str).",
+        },
+        "page": {
+            "description": "One page of content. Accumulated until done. Payload key: content (str).",
+        },
+        "done": {
+            "description": "Triggers the file write and emits the written notice.",
+        },
+    },
     "publish": "written~data/file/written",
+    "output_notices": {
+        "written": {
+            "description": "Emitted after the file is flushed to disk. Payload key: file (str).",
+        },
+    },
 })
 class FileWriterOid(OidComponent):
     """Buffers incoming text/page notices and writes them to a file on done."""

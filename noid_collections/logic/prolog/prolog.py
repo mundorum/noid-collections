@@ -96,11 +96,41 @@ def _run_prolog(program: str, goal: str) -> list:
 
 @Noid.component({
     "id": "logic:prolog",
+    "name": "Prolog",
+    "description": (
+        "Executes SWI-Prolog goals via PySwip and publishes unified solutions. "
+        "Static facts and rules can be baked into the facts_rules property; "
+        "dynamic facts can be injected per-query."
+    ),
     "properties": {
-        "facts_rules": {"default": ""},
+        "facts_rules": {
+            "default": "",
+            "description": "Prolog program text (facts and rules) loaded before every query.",
+        },
     },
-    "receive": ["query"],
+    "receive": {
+        "query": {
+            "description": (
+                "Prolog goal to execute. Payload keys: query (str, the goal), "
+                "facts_rules (str, optional extra clauses). Also accepts a plain goal string."
+            ),
+        },
+    },
     "publish": "result~slm/prolog/result;error~slm/prolog/error;done~slm/prolog/done",
+    "output_notices": {
+        "result": {
+            "description": (
+                "Successful solutions. Keys: query (str), "
+                "solutions (list of variable-binding dicts), solution_count (int)."
+            ),
+        },
+        "error": {
+            "description": "Query failed or threw an exception. Keys: query (str), message (str).",
+        },
+        "done": {
+            "description": "Always emitted after result or error, signaling completion.",
+        },
+    },
 })
 class PrologAgentOid(OidComponent):
     """Executes a Prolog goal and publishes unified solutions."""

@@ -260,13 +260,40 @@ def postprocess_markdown(text: str, use_spellcheck: bool = True) -> Tuple[str, d
 
 @Noid.component({
     "id": "pdf:postprocessor",
+    "name": "PDF Postprocessor",
+    "description": (
+        "Cleans up PDF-extracted text and optionally converts it to Markdown, "
+        "then republishes the result. Supports both complete and page-by-page input/output."
+    ),
     "properties": {
-        "source":         {"default": "pymupdf"},   # "pymupdf" | "markitdown"
-        "format":         {"default": "text"},       # "text" | "markdown"
-        "output_mode":    {"default": "complete"},   # "complete" | "page_by_page"
-        "use_spellcheck": {"default": True},
+        "source": {
+            "default": "pymupdf",
+            "description": "Input format: pymupdf (page-marker text) or markitdown (flowing Markdown).",
+        },
+        "format": {
+            "default": "text",
+            "description": "Output format: text (plain) or markdown.",
+        },
+        "output_mode": {
+            "default": "complete",
+            "description": "Dispatch mode: complete (one text notice) or page_by_page (one page notice per page).",
+        },
+        "use_spellcheck": {
+            "default": True,
+            "description": "Apply SymSpell spell correction when the symspellpy package is installed.",
+        },
     },
-    "receive": ["text", "page", "done"],
+    "receive": {
+        "text": {
+            "description": "Complete extracted text. Payload keys: content (str), file (str, optional).",
+        },
+        "page": {
+            "description": "One page of extracted text, accumulated until done. Payload keys: content (str), file (str, optional).",
+        },
+        "done": {
+            "description": "Signals end of input; triggers postprocessing and publishes results.",
+        },
+    },
     "publish": (
         "text~pdf/processed/text"
         ";page~pdf/processed/page"
@@ -274,6 +301,23 @@ def postprocess_markdown(text: str, use_spellcheck: bool = True) -> Tuple[str, d
         ";error~pdf/processed/error"
         ";status~pdf/postprocessor/status"
     ),
+    "output_notices": {
+        "text": {
+            "description": "Processed full text (complete mode). Keys: file (str), content (str).",
+        },
+        "page": {
+            "description": "One processed page (page_by_page mode). Keys: file, page (int), total (int), content (str).",
+        },
+        "done": {
+            "description": "All output published. Keys: file (str), pages (int, page_by_page mode only).",
+        },
+        "error": {
+            "description": "Postprocessing failed. Key: error (str).",
+        },
+        "status": {
+            "description": "Progress message string emitted during processing.",
+        },
+    },
 })
 class PdfPostprocessorOid(OidComponent):
     """Accumulates extracted pages, applies cleanup, and republishes the result."""

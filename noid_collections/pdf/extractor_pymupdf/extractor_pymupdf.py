@@ -42,12 +42,48 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "pdf:extractor-pymupdf",
+    "name": "PDF Extractor PyMuPDF",
+    "description": (
+        "Extracts raw text from a PDF page by page using PyMuPDF, "
+        "wrapping each page in a '--- PAGE N ---' header. "
+        "Interchangeable with pdf:extractor-markitdown in scene pipelines."
+    ),
     "properties": {
-        "input_file":  {"default": ""},
-        "output_mode": {"default": "complete"},
+        "input_file": {
+            "default": "",
+            "description": "Path to the PDF to extract. Can be overridden by the extract notice payload.",
+        },
+        "output_mode": {
+            "default": "complete",
+            "description": (
+                "Dispatch mode: complete (one text notice with all pages joined) "
+                "or page_by_page (one page notice per page)."
+            ),
+        },
     },
-    "receive": ["extract"],
+    "receive": {
+        "extract": {
+            "description": "Trigger text extraction. Payload key file (str) overrides the input_file property.",
+        },
+    },
     "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
+    "output_notices": {
+        "text": {
+            "description": "All pages joined (complete mode). Keys: file (str), content (str), pages (int).",
+        },
+        "page": {
+            "description": "One extracted page (page_by_page mode). Keys: file, page (int), total (int), content (str).",
+        },
+        "done": {
+            "description": "Extraction complete. Keys: file (str), pages (int).",
+        },
+        "error": {
+            "description": "Extraction failed. Keys: file (str), error (str).",
+        },
+        "status": {
+            "description": "Progress message string emitted during extraction.",
+        },
+    },
 })
 class PdfExtractorPyMuPdfOid(OidComponent):
     """Extracts raw text from a PDF page by page using PyMuPDF."""

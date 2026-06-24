@@ -1,0 +1,45 @@
+id: pdf:postprocessor
+name: PDF Postprocessor
+description: Cleans up PDF-extracted text and optionally converts it to Markdown,
+  then republishes the result. Supports both complete and page-by-page input/output.
+properties:
+  source:
+    description: 'Input format: pymupdf (page-marker text) or markitdown (flowing
+      Markdown).'
+    default: pymupdf
+    required: false
+  format:
+    description: 'Output format: text (plain) or markdown.'
+    default: text
+    required: false
+  output_mode:
+    description: 'Dispatch mode: complete (one text notice) or page_by_page (one page
+      notice per page).'
+    default: complete
+    required: false
+  use_spellcheck:
+    description: Apply SymSpell spell correction when the symspellpy package is installed.
+    default: true
+    required: false
+input_notices:
+  text:
+    description: 'Complete extracted text. Payload keys: content (str), file (str,
+      optional).'
+  page:
+    description: 'One page of extracted text, accumulated until done. Payload keys:
+      content (str), file (str, optional).'
+  done:
+    description: Signals end of input; triggers postprocessing and publishes results.
+output_notices:
+  text:
+    description: 'Processed full text (complete mode). Keys: file (str), content (str).'
+  page:
+    description: 'One processed page (page_by_page mode). Keys: file, page (int),
+      total (int), content (str).'
+  done:
+    description: 'All output published. Keys: file (str), pages (int, page_by_page
+      mode only).'
+  error:
+    description: 'Postprocessing failed. Key: error (str).'
+  status:
+    description: Progress message string emitted during processing.

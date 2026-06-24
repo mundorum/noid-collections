@@ -1,0 +1,23 @@
+id: basic:console-display
+name: Console Display
+description: Prints received messages to stdout. A sink component for pipeline development
+  and debugging.
+properties:
+  label:
+    description: Prefix string printed before each message.
+    default: ''
+    required: false
+  show_topic:
+    description: Also print the triggering notice name after the label.
+    default: false
+    required: false
+  pretty:
+    description: JSON-pretty-print dict payloads (2-space indent).
+    default: true
+    required: false
+input_notices:
+  show:
+    description: Message to display. Accepts any payload type.
+output_notices:
+  output:
+    description: Re-emits the received message unchanged, enabling downstream chaining.

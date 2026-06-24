@@ -34,12 +34,41 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "data:sql",
+    "name": "SQL",
+    "description": (
+        "Executes SQL queries against a DuckDB or SQLite database "
+        "and publishes structured results."
+    ),
     "properties": {
-        "driver":     {"default": "duckdb"},
-        "connection": {"default": ":memory:"},
+        "driver": {
+            "default": "duckdb",
+            "description": "Database driver: duckdb or sqlite.",
+        },
+        "connection": {
+            "default": ":memory:",
+            "description": "Database path or :memory: for an in-memory database.",
+        },
     },
-    "receive": ["query"],
+    "receive": {
+        "query": {
+            "description": (
+                "SQL query to execute. Payload keys: sql (str), params (list, optional). "
+                "Also accepts a plain SQL string."
+            ),
+        },
+    },
     "publish": "result~slm/sql/result;error~slm/sql/error",
+    "output_notices": {
+        "result": {
+            "description": (
+                "Query results. Keys: sql (str), columns (list of str), "
+                "rows (list of lists), row_count (int)."
+            ),
+        },
+        "error": {
+            "description": "Query failed. Keys: sql (str), message (str).",
+        },
+    },
 })
 class SqlAgentOid(OidComponent):
     """Executes SQL and publishes structured results."""

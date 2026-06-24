@@ -1,0 +1,23 @@
+id: data:sql
+name: SQL
+description: Executes SQL queries against a DuckDB or SQLite database and publishes
+  structured results.
+properties:
+  driver:
+    description: 'Database driver: duckdb or sqlite.'
+    default: duckdb
+    required: false
+  connection:
+    description: 'Database path or :memory: for an in-memory database.'
+    default: ':memory:'
+    required: false
+input_notices:
+  query:
+    description: 'SQL query to execute. Payload keys: sql (str), params (list, optional).
+      Also accepts a plain SQL string.'
+output_notices:
+  result:
+    description: 'Query results. Keys: sql (str), columns (list of str), rows (list
+      of lists), row_count (int).'
+  error:
+    description: 'Query failed. Keys: sql (str), message (str).'

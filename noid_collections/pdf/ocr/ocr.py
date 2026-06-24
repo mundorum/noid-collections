@@ -40,16 +40,54 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "pdf:ocr",
+    "name": "PDF OCR",
+    "description": (
+        "Applies OCR to a PDF file using OCRmyPDF and publishes "
+        "the path to the output file."
+    ),
     "properties": {
-        "input_file":   {"default": ""},
-        "output_file":  {"default": ""},
-        "language":     {"default": "eng"},
-        "deskew":       {"default": True},
-        "rotate_pages": {"default": True},
-        "force_ocr":    {"default": True},
+        "input_file": {
+            "default": "",
+            "description": "Path to the input PDF. Can be overridden by the ocr notice payload.",
+        },
+        "output_file": {
+            "default": "",
+            "description": "Path for the OCR'd output PDF. If empty, a temporary file is created.",
+        },
+        "language": {
+            "default": "eng",
+            "description": "Tesseract language code (e.g. eng, por, fra).",
+        },
+        "deskew": {
+            "default": True,
+            "description": "Correct skewed pages before OCR.",
+        },
+        "rotate_pages": {
+            "default": True,
+            "description": "Auto-rotate pages based on content orientation.",
+        },
+        "force_ocr": {
+            "default": True,
+            "description": "OCR even if a text layer already exists in the PDF.",
+        },
     },
-    "receive": ["ocr"],
+    "receive": {
+        "ocr": {
+            "description": "Trigger OCR. Payload key file (str) overrides the input_file property.",
+        },
+    },
     "publish": "done~pdf/ocr/done;error~pdf/ocr/error;status~pdf/ocr/status",
+    "output_notices": {
+        "done": {
+            "description": "OCR complete. Payload key: file (str) — path to the output PDF.",
+        },
+        "error": {
+            "description": "OCR failed. Keys: error (str), file (str) — input path.",
+        },
+        "status": {
+            "description": "Progress message string emitted during OCR.",
+        },
+    },
 })
 class PdfOcrOid(OidComponent):
     """Runs OCRmyPDF on a PDF file; publishes done with the output path."""

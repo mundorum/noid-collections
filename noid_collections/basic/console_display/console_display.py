@@ -23,13 +23,36 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "basic:console-display",
+    "name": "Console Display",
+    "description": (
+        "Prints received messages to stdout. "
+        "A sink component for pipeline development and debugging."
+    ),
     "properties": {
-        "label":       {"default": ""},
-        "show_topic":  {"default": False},
-        "pretty":      {"default": True},
+        "label": {
+            "default": "",
+            "description": "Prefix string printed before each message.",
+        },
+        "show_topic": {
+            "default": False,
+            "description": "Also print the triggering notice name after the label.",
+        },
+        "pretty": {
+            "default": True,
+            "description": "JSON-pretty-print dict payloads (2-space indent).",
+        },
     },
-    "receive": ["show"],
+    "receive": {
+        "show": {
+            "description": "Message to display. Accepts any payload type.",
+        },
+    },
     "publish": "output~console/output",
+    "output_notices": {
+        "output": {
+            "description": "Re-emits the received message unchanged, enabling downstream chaining.",
+        },
+    },
 })
 class ConsoleDisplayOid(OidComponent):
     """Prints every received message to stdout."""

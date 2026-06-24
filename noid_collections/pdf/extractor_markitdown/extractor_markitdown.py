@@ -43,12 +43,47 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "pdf:extractor-markitdown",
+    "name": "PDF Extractor MarkItDown",
+    "description": (
+        "Extracts text from a PDF as flowing Markdown using MarkItDown. "
+        "Interchangeable with pdf:extractor-pymupdf in scene pipelines."
+    ),
     "properties": {
-        "input_file":  {"default": ""},
-        "output_mode": {"default": "complete"},
+        "input_file": {
+            "default": "",
+            "description": "Path to the PDF to extract. Can be overridden by the extract notice payload.",
+        },
+        "output_mode": {
+            "default": "complete",
+            "description": (
+                "Dispatch mode: complete (one text notice) or page_by_page "
+                "(one page notice; MarkItDown has no page boundaries so total is always 1)."
+            ),
+        },
     },
-    "receive": ["extract"],
+    "receive": {
+        "extract": {
+            "description": "Trigger text extraction. Payload key file (str) overrides the input_file property.",
+        },
+    },
     "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
+    "output_notices": {
+        "text": {
+            "description": "Extracted Markdown content (complete mode). Keys: file (str), content (str), pages (null).",
+        },
+        "page": {
+            "description": "Extracted content as a single page (page_by_page mode). Keys: file, page (1), total (1), content (str).",
+        },
+        "done": {
+            "description": "Extraction complete. Keys: file (str), pages (null).",
+        },
+        "error": {
+            "description": "Extraction failed. Keys: file (str), error (str).",
+        },
+        "status": {
+            "description": "Progress message string emitted during extraction.",
+        },
+    },
 })
 class PdfExtractorMarkItDownOid(OidComponent):
     """Extracts text from a PDF using MarkItDown; publishes complete markdown content."""

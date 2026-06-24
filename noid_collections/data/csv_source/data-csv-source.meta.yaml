@@ -1,0 +1,31 @@
+id: data:csv-source
+name: CSV Source
+description: Reads a CSV string and publishes its data in full-table mode or row-by-row
+  mode with a movable cursor.
+properties:
+  content:
+    description: CSV text, including a header row as the first line.
+    default: ''
+    required: false
+  label:
+    description: Label included in every published payload to identify this source.
+    default: csv
+    required: false
+input_notices:
+  table:
+    description: Publish the entire CSV as a structured table.
+  first:
+    description: Reset the row cursor; publish schema then the first row.
+  next:
+    description: Advance the cursor; publish the next row, or exhausted if none remain.
+output_notices:
+  table:
+    description: 'Full table payload. Keys: label, columns (list of str), rows (list
+      of dicts).'
+  schema:
+    description: 'Column names only. Keys: label, columns (list of str). Emitted before
+      the first row.'
+  row:
+    description: 'One data row. Keys: label, index (int), row (dict).'
+  exhausted:
+    description: 'All rows have been served. Key: label.'
