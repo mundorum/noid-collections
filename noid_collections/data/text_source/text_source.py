@@ -22,12 +22,36 @@ from noid.core.component import Noid, OidComponent
 
 @Noid.component({
     "id": "data:text-source",
+    "name": "Text Source",
+    "description": (
+        "Publishes its text property as a message whenever triggered. "
+        "To auto-start, wire player/start to the trigger notice in the scene."
+    ),
     "properties": {
-        "text":  {"default": ""},
-        "label": {"default": "text"},
+        "text": {
+            "default": "",
+            "description": "Text content to publish when triggered.",
+        },
+        "label": {
+            "default": "text",
+            "description": "Label included in the published payload to identify this source.",
+        },
     },
-    "receive": ["trigger"],
+    "receive": {
+        "trigger": {"description": "Triggers publication of the text content."},
+    },
     "publish": "text~slm/text/output;done~slm/text/done",
+    "output_notices": {
+        "text": {
+            "description": (
+                "Emitted when triggered. "
+                "Payload keys: label (str), content (str)."
+            ),
+        },
+        "done": {
+            "description": "Emitted after text, signaling pipeline completion.",
+        },
+    },
 })
 class TextSourceOid(OidComponent):
     """Publishes its `text` property as a message whenever triggered."""
