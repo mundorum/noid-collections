@@ -55,6 +55,7 @@ from noid.core.component import Noid, OidComponent
     "properties": {
         "output_file": {
             "default": "",
+            "kind": "resource",
             "description": "Destination file path (required).",
         },
         "encoding": {

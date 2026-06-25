@@ -50,6 +50,9 @@ from noid.core.component import Noid, OidComponent
     "id": "mypkg:name",          # required; "namespace:name" convention
     "properties": {
         "key": {"default": val}, # optional default; optional "readonly": True
+        # File-path properties: add "kind": "resource" so NoidPlayer resolves
+        # namespace-prefixed values (e.g. "shared:data/file.csv") to absolute paths.
+        "path_key": {"default": "", "kind": "resource", "description": "..."},
     },
     "receive":   ["notice"],     # required for handler dispatch
     "subscribe": "topic~notice", # bus topic → internal notice  (;-separated)
@@ -178,3 +181,4 @@ Before submitting any component:
 - [ ] At least one test exercises the component via the bus
 - [ ] Tests use `Bus()` (not `Bus.i`)
 - [ ] No web framework imports in component code
+- [ ] File-path properties declare `"kind": "resource"` so the player can resolve namespace-prefixed values

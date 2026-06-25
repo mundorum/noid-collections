@@ -46,6 +46,7 @@ from noid.core.component import Noid, OidComponent
         },
         "connection": {
             "default": ":memory:",
+            "kind": "resource",
             "description": "Database path or :memory: for an in-memory database.",
         },
     },

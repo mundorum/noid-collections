@@ -48,10 +48,12 @@ from noid.core.component import Noid, OidComponent
     "properties": {
         "input_file": {
             "default": "",
+            "kind": "resource",
             "description": "Path to the input PDF. Can be overridden by the ocr notice payload.",
         },
         "output_file": {
             "default": "",
+            "kind": "resource",
             "description": "Path for the OCR'd output PDF. If empty, a temporary file is created.",
         },
         "language": {

@@ -51,6 +51,7 @@ from noid.core.component import Noid, OidComponent
     "properties": {
         "input_file": {
             "default": "",
+            "kind": "resource",
             "description": "Path to the PDF to extract. Can be overridden by the extract notice payload.",
         },
         "output_mode": {
