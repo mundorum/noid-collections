@@ -1,15 +1,15 @@
 {
   "title": "Text source → console display",
   "imports": [
-    "../../../noid_collections/data/text_source/text_source.py",
+    "../../../noid_collections/data/csv_source/csv_source.py",
     "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
     {
-      "type": "data:text-source",
+      "type": "data:csv-source",
       "id":   "src",
       "properties": {
-        "label": "dinosaur",
+        "label": "greeting",
         "text":  "The dinosaur jumped into the mud."
       },
       "subscribe": "player/start~load",

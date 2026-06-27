@@ -1,13 +1,16 @@
 """
-data:csv-source — reads a CSV string and publishes it in two modes:
+data:csv-source — reads CSV data and publishes it in two modes:
 
-  1. Complete table  — send a `table` notice with all rows as a list of dicts.
+  1. Complete table  — send a `load` notice with all rows as a list of dicts.
   2. Row-by-row      — send `schema` once (column names), then one `row` per call.
      `first` resets the cursor and emits the first row.
      `next`  advances the cursor and emits the next row, or `exhausted` at end.
 
+Content can be provided inline via the `content` property or read from a file
+via the `file` property.  `file` takes precedence over `content`.
+
 Notices received:
-  table  → publish the full table (label + columns + rows)
+  load   → publish the full table (label + columns + rows)
   first  → publish schema + first row; reset internal cursor
   next   → publish next row, or `exhausted` if no more rows
 
@@ -24,7 +27,18 @@ Scene usage example:
       "label":   "patients",
       "content": "name,age\\nAlice,30\\nBob,25"
     },
-    "subscribe": "pipeline/start~table;pipeline/first~first;pipeline/next~next",
+    "subscribe": "pipeline/start~load;pipeline/first~first;pipeline/next~next",
+    "publish":   "table~pipeline/table;schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
+  }
+
+  Or loading from a file:
+  {
+    "type": "data:csv-source",
+    "properties": {
+      "label": "patients",
+      "file":  "shared:data/patients.csv"
+    },
+    "subscribe": "pipeline/start~load;pipeline/first~first;pipeline/next~next",
     "publish":   "table~pipeline/table;schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
   }
 """
@@ -57,13 +71,19 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
     "id": "data:csv-source",
     "name": "CSV Source",
     "description": (
-        "Reads a CSV string and publishes its data in full-table mode "
-        "or row-by-row mode with a movable cursor."
+        "Reads CSV data and publishes it in full-table mode "
+        "or row-by-row mode with a movable cursor. "
+        "Content can be provided inline or read from a file."
     ),
     "properties": {
         "content": {
             "default": "",
-            "description": "CSV text, including a header row as the first line.",
+            "description": "Inline CSV text, including a header row as the first line. Ignored if `file` is set.",
+        },
+        "file": {
+            "default": "",
+            "kind": "resource",
+            "description": "Path to a CSV file to read. Takes precedence over `content`.",
         },
         "label": {
             "default": "csv",
@@ -71,15 +91,15 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
         },
     },
     "receive": {
-        "table": {"description": "Publish the entire CSV as a structured table."},
+        "load":  {"description": "Publish the entire CSV as a structured table."},
         "first": {"description": "Reset the row cursor; publish schema then the first row."},
         "next":  {"description": "Advance the cursor; publish the next row, or exhausted if none remain."},
     },
     "publish": (
-        "table~slm/csv/table"
-        ";schema~slm/csv/schema"
-        ";row~slm/csv/row"
-        ";exhausted~slm/csv/exhausted"
+        "table~data/csv/table"
+        ";schema~data/csv/schema"
+        ";row~data/csv/row"
+        ";exhausted~data/csv/exhausted"
     ),
     "output_notices": {
         "table": {
@@ -108,10 +128,15 @@ class CsvSourceOid(OidComponent):
 
     def _ensure_parsed(self) -> None:
         if not self._parsed:
-            self._columns, self._rows = _parse_csv(self.content)
+            if self.file:
+                with open(self.file, "r", encoding="utf-8") as f:
+                    content = f.read()
+            else:
+                content = self.content
+            self._columns, self._rows = _parse_csv(content)
             self._parsed = True
 
-    async def handle_table(self, notice: str, message: dict) -> None:
+    async def handle_load(self, notice: str, message: dict) -> None:
         """Publish the entire CSV as a structured table."""
         self._ensure_parsed()
         await self._notify("table", {

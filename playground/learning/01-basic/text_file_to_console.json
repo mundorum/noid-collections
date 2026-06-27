@@ -1,5 +1,11 @@
 {
   "title": "Text source → console display",
+  "namespaces": {
+    "scene": {
+      "kind": "resource",
+      "root": "."
+    }
+  },
   "imports": [
     "../../../noid_collections/data/text_source/text_source.py",
     "../../../noid_collections/basic/console_display/console_display.py"
@@ -10,7 +16,7 @@
       "id":   "src",
       "properties": {
         "label": "dinosaur",
-        "text":  "The dinosaur jumped into the mud."
+        "file":  "scene:dinosaur.txt"
       },
       "subscribe": "player/start~load",
       "publish": "text~pipeline/text;done~player/done"
