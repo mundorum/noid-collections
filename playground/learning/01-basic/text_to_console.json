@@ -13,12 +13,12 @@
         "text":  "The dinosaur jumped into the mud."
       },
       "subscribe": "player/start~load",
-      "publish": "text~pipeline/text;done~player/done"
+      "publish": "text~pipeline/text"
     },
     {
       "type": "basic:console-display",
       "id":   "display",
-      "properties": {"label": "Text"},
+      "properties": {"label": "Text", "field": "content"},
       "subscribe": "pipeline/text~show",
       "publish": "output~player/done"
     }

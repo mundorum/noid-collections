@@ -8,11 +8,12 @@ Properties:
   label      — prefix printed before each message (default: "")
   show_topic — also print the originating bus topic (default: False)
   pretty     — JSON-pretty-print dict payloads (default: True)
+  field      — if set, display only this key from a dict payload (default: "")
 
 Scene usage example:
   {
     "type": "basic:console-display",
-    "properties": {"label": "LLM Output"},
+    "properties": {"label": "LLM Output", "field": "content"},
     "subscribe": "pipeline/llm-out~show"
   }
 """
@@ -41,6 +42,10 @@ from noid.core.component import Noid, OidComponent
             "default": True,
             "description": "JSON-pretty-print dict payloads (2-space indent).",
         },
+        "field": {
+            "default": "",
+            "description": "If set, display only this key from a dict payload.",
+        },
     },
     "receive": {
         "show": {
@@ -62,10 +67,12 @@ class ConsoleDisplayOid(OidComponent):
         if self.show_topic:
             prefix = f"{prefix}({notice}) "
 
-        if isinstance(message, dict) and self.pretty:
-            body = json.dumps(message, indent=2, ensure_ascii=False)
+        payload = message[self.field] if (self.field and isinstance(message, dict) and self.field in message) else message
+
+        if isinstance(payload, dict) and self.pretty:
+            body = json.dumps(payload, indent=2, ensure_ascii=False)
         else:
-            body = str(message)
+            body = str(payload)
 
         print(f"{prefix}{body}")
         await self._notify("output", message)

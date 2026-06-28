@@ -1,5 +1,5 @@
 {
-  "title": "Text source → console display",
+  "title": "Copy text source",
   "namespaces": {
     "scene": {
       "kind": "resource",
@@ -8,7 +8,7 @@
   },
   "imports": [
     "../../../noid_collections/data/text_source/text_source.py",
-    "../../../noid_collections/basic/console_display/console_display.py"
+    "../../../noid_collections/data/file_writer/file_writer.py"
   ],
   "components": [
     {
@@ -19,14 +19,16 @@
         "file":  "scene:dinosaur.txt"
       },
       "subscribe": "player/start~load",
-      "publish": "text~pipeline/text"
+      "publish": "text~pipeline/text;done~pipeline/done"
     },
     {
-      "type": "basic:console-display",
-      "id":   "display",
-      "properties": {"field": "content"},
-      "subscribe": "pipeline/text~show",
-      "publish": "output~player/done"
+      "type": "data:file-writer",
+      "id":   "writer",
+      "properties": {
+        "output_file": "scene:dinosaur-copy.txt"
+      },
+      "subscribe": "pipeline/text~text;pipeline/done~done",
+      "publish":   "written~player/done"
     }
   ]
 }

@@ -15,6 +15,10 @@ properties:
     description: JSON-pretty-print dict payloads (2-space indent).
     default: true
     required: false
+  field:
+    description: If set, display only this key from a dict payload.
+    default: ''
+    required: false
 input_notices:
   show:
     description: Message to display. Accepts any payload type.

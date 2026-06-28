@@ -47,3 +47,35 @@ async def test_console_display_plain_string(capsys) -> None:
     captured = capsys.readouterr()
     assert "plain text" in captured.out
     await comp.stop()
+
+
+async def test_console_display_field(capsys) -> None:
+    bus = Bus()
+    comp = ConsoleDisplayOid(
+        bus=bus,
+        subscribe="test/field~show",
+        properties={"field": "content"},
+    )
+    await comp.start()
+    await bus.publish("test/field", {"content": "hello", "other": "ignored"})
+
+    captured = capsys.readouterr()
+    assert "hello" in captured.out
+    assert "ignored" not in captured.out
+    await comp.stop()
+
+
+async def test_console_display_field_missing_key(capsys) -> None:
+    """Falls back to full message when the field key is absent."""
+    bus = Bus()
+    comp = ConsoleDisplayOid(
+        bus=bus,
+        subscribe="test/missing~show",
+        properties={"field": "nonexistent"},
+    )
+    await comp.start()
+    await bus.publish("test/missing", {"content": "hello"})
+
+    captured = capsys.readouterr()
+    assert "hello" in captured.out
+    await comp.stop()

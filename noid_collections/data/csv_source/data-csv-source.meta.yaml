@@ -1,10 +1,15 @@
 id: data:csv-source
 name: CSV Source
-description: Reads a CSV string and publishes its data in full-table mode or row-by-row
-  mode with a movable cursor.
+description: Reads CSV data and publishes it in full-table mode or row-by-row mode
+  with a movable cursor. Content can be provided inline or read from a file.
 properties:
   content:
-    description: CSV text, including a header row as the first line.
+    description: Inline CSV text, including a header row as the first line. Ignored
+      if `file` is set.
+    default: ''
+    required: false
+  file:
+    description: Path to a CSV file to read. Takes precedence over `content`.
     default: ''
     required: false
   label:
@@ -12,7 +17,7 @@ properties:
     default: csv
     required: false
 input_notices:
-  table:
+  load:
     description: Publish the entire CSV as a structured table.
   first:
     description: Reset the row cursor; publish schema then the first row.
