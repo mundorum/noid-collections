@@ -13,15 +13,27 @@ The optional `sample_size` property limits the number of rows served. If set
 to a positive integer, only the first N rows are visible (in all modes: load,
 first, and next).  0 means no limit.
 
+The `format` property controls the row payload shape:
+  "dict" (default) — each row is a dict {"col": value, ...}
+  "list" (compact) — each row is a list [value, ...]; column order follows `columns`
+
+Row indices are 1-based in all modes.
+
 Notices received:
   load   → publish the full table (label + columns + rows)
   first  → publish schema + first row; reset internal cursor
   next   → publish next row, or `exhausted` if no more rows
 
-Notices published:
+Notices published (format="dict"):
   table     → {"label", "columns": [...], "rows": [{...}, ...]}
   schema    → {"label", "columns": [...]}
   row       → {"label", "index": int, "row": {...}}
+  exhausted → {"label"}
+
+Notices published (format="list"):
+  table     → {"label", "columns": [...], "rows": [[...], ...]}
+  schema    → {"label", "columns": [...]}
+  row       → {"label", "index": int, "row": [...]}
   exhausted → {"label"}
 
 Scene usage example:
@@ -35,13 +47,14 @@ Scene usage example:
     "publish":   "table~pipeline/table;schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
   }
 
-  Or loading from a file with a sample limit:
+  Or loading from a file with compact format:
   {
     "type": "data:csv-source",
     "properties": {
       "label":       "patients",
       "input_file":  "shared:data/patients.csv",
-      "sample_size": 10
+      "sample_size": 10,
+      "format":      "list"
     },
     "subscribe": "pipeline/start~load;pipeline/first~first;pipeline/next~next",
     "publish":   "table~pipeline/table;schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
@@ -105,11 +118,22 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
                 "Applies consistently to all modes (load, first, next)."
             ),
         },
+        "format": {
+            "default": "dict",
+            "description": (
+                "Row payload format. "
+                "'dict' (default): each row is {col: value, ...}. "
+                "'list' (compact): each row is [value, ...] ordered by columns; "
+                "saves memory for large tables by omitting repeated field names."
+            ),
+        },
     },
     "receive": {
         "load":  {"description": "Publish the entire CSV as a structured table."},
         "first": {"description": "Reset the row cursor; publish schema then the first row."},
-        "next":  {"description": "Advance the cursor; publish the next row, or exhausted if none remain."},
+        "next":  {
+            "description": "Advance the cursor; publish the next row, or exhausted if none remain.",
+        },
     },
     "publish": (
         "table~data/csv/table"
@@ -119,13 +143,22 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
     ),
     "output_notices": {
         "table": {
-            "description": "Full table payload. Keys: label, columns (list of str), rows (list of dicts).",
+            "description": (
+                "Full table payload. Keys: label, columns (list of str), rows. "
+                "rows is a list of dicts (format='dict') or a list of lists (format='list')."
+            ),
         },
         "schema": {
-            "description": "Column names only. Keys: label, columns (list of str). Emitted before the first row.",
+            "description": (
+                "Column names only. Keys: label, columns (list of str). "
+                "Emitted before the first row."
+            ),
         },
         "row": {
-            "description": "One data row. Keys: label, index (int), row (dict).",
+            "description": (
+                "One data row. Keys: label, index (int, 1-based), row. "
+                "row is a dict (format='dict') or a list (format='list')."
+            ),
         },
         "exhausted": {
             "description": "All rows have been served. Key: label.",
@@ -157,6 +190,12 @@ class CsvSourceOid(OidComponent):
         n = int(self.sample_size) if self.sample_size else 0
         return self._rows[:n] if n > 0 else self._rows
 
+    def _row_payload(self, row: Dict[str, str]):
+        """Convert a row dict to the configured format."""
+        if self.format == "list":
+            return [row.get(col, "") for col in self._columns]
+        return row
+
     async def handle_load(self, notice: str, message: dict) -> None:
         """Publish the entire CSV as a structured table."""
         self._ensure_parsed()
@@ -164,7 +203,7 @@ class CsvSourceOid(OidComponent):
         await self._notify("table", {
             "label":   self.label,
             "columns": self._columns,
-            "rows":    rows,
+            "rows":    [self._row_payload(r) for r in rows],
         })
 
     async def handle_first(self, notice: str, message: dict) -> None:
@@ -176,8 +215,8 @@ class CsvSourceOid(OidComponent):
         if rows:
             await self._notify("row", {
                 "label": self.label,
-                "index": 0,
-                "row":   rows[0],
+                "index": 1,
+                "row":   self._row_payload(rows[0]),
             })
         else:
             await self._notify("exhausted", {"label": self.label})
@@ -190,8 +229,8 @@ class CsvSourceOid(OidComponent):
         if 0 <= self._cursor < len(rows):
             await self._notify("row", {
                 "label": self.label,
-                "index": self._cursor,
-                "row":   rows[self._cursor],
+                "index": self._cursor + 1,
+                "row":   self._row_payload(rows[self._cursor]),
             })
         else:
             await self._notify("exhausted", {"label": self.label})

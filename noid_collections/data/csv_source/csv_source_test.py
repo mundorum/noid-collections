@@ -29,6 +29,29 @@ async def test_load_publishes_all_rows() -> None:
     await comp.stop()
 
 
+async def test_load_compact_format() -> None:
+    bus = Bus()
+    tables = []
+    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/load~load",
+        properties={"content": CSV, "label": "people", "format": "list"},
+    )
+    await comp.start()
+    await bus.publish("test/load", {})
+
+    assert len(tables) == 1
+    assert tables[0]["columns"] == ["name", "age", "city"]
+    assert tables[0]["rows"] == [
+        ["Alice", "30", "SP"],
+        ["Bob",   "25", "RJ"],
+        ["Carol", "35", "BH"],
+    ]
+    await comp.stop()
+
+
 async def test_first_publishes_schema_and_row() -> None:
     bus = Bus()
     schemas, rows = [], []
@@ -45,7 +68,10 @@ async def test_first_publishes_schema_and_row() -> None:
 
     assert schemas == [{"label": "people", "columns": ["name", "age", "city"]}]
     assert len(rows) == 1
-    assert rows[0] == {"label": "people", "index": 0, "row": {"name": "Alice", "age": "30", "city": "SP"}}
+    assert rows[0] == {
+        "label": "people", "index": 1,
+        "row": {"name": "Alice", "age": "30", "city": "SP"},
+    }
     await comp.stop()
 
 
@@ -62,15 +88,15 @@ async def test_next_iterates_rows() -> None:
     )
     await comp.start()
 
-    await bus.publish("test/first", {})   # row 0
-    await bus.publish("test/next",  {})   # row 1
+    await bus.publish("test/first", {})   # row 1
     await bus.publish("test/next",  {})   # row 2
+    await bus.publish("test/next",  {})   # row 3
     await bus.publish("test/next",  {})   # exhausted
 
     assert len(rows) == 3
-    assert rows[0]["index"] == 0
-    assert rows[1]["index"] == 1
-    assert rows[2]["index"] == 2
+    assert rows[0]["index"] == 1
+    assert rows[1]["index"] == 2
+    assert rows[2]["index"] == 3
     assert len(exhausted) == 1
     await comp.stop()
 
@@ -175,9 +201,9 @@ async def test_sample_size_limits_row_by_row() -> None:
     )
     await comp.start()
 
-    await bus.publish("test/first", {})  # row 0
-    await bus.publish("test/next",  {})  # row 1
-    await bus.publish("test/next",  {})  # exhausted (row 2 is beyond sample)
+    await bus.publish("test/first", {})  # row 1
+    await bus.publish("test/next",  {})  # row 2
+    await bus.publish("test/next",  {})  # exhausted (row 3 is beyond sample)
 
     assert len(rows) == 2
     assert rows[0]["row"]["name"] == "Alice"
@@ -200,4 +226,32 @@ async def test_sample_size_zero_means_no_limit() -> None:
     await bus.publish("test/load", {})
 
     assert len(tables[0]["rows"]) == 3
+    await comp.stop()
+
+
+async def test_compact_row_by_row() -> None:
+    bus = Bus()
+    schemas, rows, exhausted = [], [], []
+    bus.subscribe("data/csv/schema",    lambda t, m: schemas.append(m))
+    bus.subscribe("data/csv/row",       lambda t, m: rows.append(m))
+    bus.subscribe("data/csv/exhausted", lambda t, m: exhausted.append(m))
+
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/first~first;test/next~next",
+        properties={"content": CSV, "label": "people", "format": "list"},
+    )
+    await comp.start()
+
+    await bus.publish("test/first", {})
+    await bus.publish("test/next",  {})
+    await bus.publish("test/next",  {})
+    await bus.publish("test/next",  {})
+
+    assert schemas == [{"label": "people", "columns": ["name", "age", "city"]}]
+    assert len(rows) == 3
+    assert rows[0] == {"label": "people", "index": 1, "row": ["Alice", "30", "SP"]}
+    assert rows[1] == {"label": "people", "index": 2, "row": ["Bob",   "25", "RJ"]}
+    assert rows[2] == {"label": "people", "index": 3, "row": ["Carol", "35", "BH"]}
+    assert len(exhausted) == 1
     await comp.stop()

@@ -22,6 +22,12 @@ properties:
       to all modes (load, first, next).
     default: 0
     required: false
+  format:
+    description: 'Row payload format. ''dict'' (default): each row is {col: value,
+      ...}. ''list'' (compact): each row is [value, ...] ordered by columns; saves
+      memory for large tables by omitting repeated field names.'
+    default: dict
+    required: false
 input_notices:
   load:
     description: Publish the entire CSV as a structured table.
@@ -31,12 +37,13 @@ input_notices:
     description: Advance the cursor; publish the next row, or exhausted if none remain.
 output_notices:
   table:
-    description: 'Full table payload. Keys: label, columns (list of str), rows (list
-      of dicts).'
+    description: 'Full table payload. Keys: label, columns (list of str), rows. rows
+      is a list of dicts (format=''dict'') or a list of lists (format=''list'').'
   schema:
     description: 'Column names only. Keys: label, columns (list of str). Emitted before
       the first row.'
   row:
-    description: 'One data row. Keys: label, index (int), row (dict).'
+    description: 'One data row. Keys: label, index (int, 1-based), row. row is a dict
+      (format=''dict'') or a list (format=''list'').'
   exhausted:
     description: 'All rows have been served. Key: label.'

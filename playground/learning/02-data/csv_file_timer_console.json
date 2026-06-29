@@ -7,25 +7,32 @@
     }
   },
   "imports": [
+    "../../../noid_collections/basic/timer/timer.py",
     "../../../noid_collections/data/csv_source/csv_source.py",
     "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
+    {
+      "type": "basic:timer",
+      "id": "timer",
+      "properties": {"period": 1.0},
+      "subscribe": "player/start~start",
+      "publish":   "pulse~pipeline/tick"
+    },
     {
       "type": "data:csv-source",
       "id":   "src",
       "properties": {
         "input_file": "scene:zombie-health-age-days-recovery.csv"
       },
-      "subscribe": "player/start~load",
-      "publish": "table~pipeline/table"
+      "subscribe": "pipeline/tick~next",
+      "publish": "schema~pipeline/schema;row~pipeline/row;exhausted~player/done"
     },
     {
       "type": "basic:console-display",
       "id":   "display",
       "properties": {"label": "Text"},
-      "subscribe": "pipeline/table~show",
-      "publish": "output~player/done"
+      "subscribe": "pipeline/schema~show;pipeline/row~show"
     }
   ]
 }
