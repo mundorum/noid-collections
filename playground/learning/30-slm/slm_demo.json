@@ -11,9 +11,9 @@
       "id":   "src",
       "properties": {
         "label": "question",
-        "text":  "What is the capital of France?"
+        "content":  "What is the capital of France?"
       },
-      "subscribe": "player/start~trigger",
+      "subscribe": "player/start~load",
       "publish": "text~pipeline/input"
     },
     {
