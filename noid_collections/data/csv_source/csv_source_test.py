@@ -105,7 +105,7 @@ async def test_load_from_file() -> None:
         comp = CsvSourceOid(
             bus=bus,
             subscribe="test/load~load",
-            properties={"file": path, "label": "people"},
+            properties={"input_file": path, "label": "people"},
         )
         await comp.start()
         await bus.publish("test/load", {})
@@ -131,7 +131,7 @@ async def test_file_takes_precedence_over_content() -> None:
         comp = CsvSourceOid(
             bus=bus,
             subscribe="test/load~load",
-            properties={"content": CSV, "file": path, "label": "src"},
+            properties={"content": CSV, "input_file": path, "label": "src"},
         )
         await comp.start()
         await bus.publish("test/load", {})
@@ -141,3 +141,63 @@ async def test_file_takes_precedence_over_content() -> None:
         await comp.stop()
     finally:
         os.unlink(path)
+
+
+async def test_sample_size_limits_load() -> None:
+    bus = Bus()
+    tables = []
+    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/load~load",
+        properties={"content": CSV, "label": "people", "sample_size": 2},
+    )
+    await comp.start()
+    await bus.publish("test/load", {})
+
+    assert len(tables[0]["rows"]) == 2
+    assert tables[0]["rows"][0]["name"] == "Alice"
+    assert tables[0]["rows"][1]["name"] == "Bob"
+    await comp.stop()
+
+
+async def test_sample_size_limits_row_by_row() -> None:
+    bus = Bus()
+    rows, exhausted = [], []
+    bus.subscribe("data/csv/row",       lambda t, m: rows.append(m))
+    bus.subscribe("data/csv/exhausted", lambda t, m: exhausted.append(m))
+
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/first~first;test/next~next",
+        properties={"content": CSV, "label": "people", "sample_size": 2},
+    )
+    await comp.start()
+
+    await bus.publish("test/first", {})  # row 0
+    await bus.publish("test/next",  {})  # row 1
+    await bus.publish("test/next",  {})  # exhausted (row 2 is beyond sample)
+
+    assert len(rows) == 2
+    assert rows[0]["row"]["name"] == "Alice"
+    assert rows[1]["row"]["name"] == "Bob"
+    assert len(exhausted) == 1
+    await comp.stop()
+
+
+async def test_sample_size_zero_means_no_limit() -> None:
+    bus = Bus()
+    tables = []
+    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/load~load",
+        properties={"content": CSV, "label": "people", "sample_size": 0},
+    )
+    await comp.start()
+    await bus.publish("test/load", {})
+
+    assert len(tables[0]["rows"]) == 3
+    await comp.stop()

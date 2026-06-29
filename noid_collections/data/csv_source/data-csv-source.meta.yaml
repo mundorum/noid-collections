@@ -1,20 +1,26 @@
 id: data:csv-source
 name: CSV Source
 description: Reads CSV data and publishes it in full-table mode or row-by-row mode
-  with a movable cursor. Content can be provided inline or read from a file.
+  with a movable cursor. Content can be provided inline or read from a file. An optional
+  sample_size limits the number of rows served.
 properties:
   content:
     description: Inline CSV text, including a header row as the first line. Ignored
-      if `file` is set.
+      if `input_file` is set.
     default: ''
     required: false
-  file:
+  input_file:
     description: Path to a CSV file to read. Takes precedence over `content`.
     default: ''
     required: false
   label:
     description: Label included in every published payload to identify this source.
     default: csv
+    required: false
+  sample_size:
+    description: Maximum number of rows to serve. 0 means no limit. Applies consistently
+      to all modes (load, first, next).
+    default: 0
     required: false
 input_notices:
   load:

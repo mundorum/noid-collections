@@ -5,10 +5,10 @@ description: Publishes text content as a message whenever a load notice arrives.
   wire player/start to the load notice in the scene.
 properties:
   text:
-    description: Inline text content to publish. Ignored if `file` is set.
+    description: Inline text content to publish. Ignored if `input_file` is set.
     default: ''
     required: false
-  file:
+  input_file:
     description: Path to a text file whose content is published. Takes precedence
       over `text`.
     default: ''
@@ -19,8 +19,8 @@ properties:
     required: false
 input_notices:
   load:
-    description: Loads and publishes the text content (from file if set, else from
-      the text property).
+    description: Loads and publishes the text content (from input_file if set, else
+      from the text property).
 output_notices:
   text:
     description: 'Emitted when loaded. Payload keys: label (str), content (str).'

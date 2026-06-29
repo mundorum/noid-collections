@@ -1,0 +1,27 @@
+id: basic:timer
+name: Timer
+description: Emits pulse notices at regular intervals for a fixed or unlimited number
+  of cycles. Responds to start, stop, and reset notices.
+properties:
+  cycles:
+    description: Number of pulses to emit before publishing done and halting. 0 means
+      run indefinitely until a stop or reset notice arrives.
+    default: 0
+    required: false
+  period:
+    description: Seconds between consecutive pulses.
+    default: 1.0
+    required: false
+input_notices:
+  start:
+    description: Begin the timer. No-op if already running.
+  stop:
+    description: Pause the timer without resetting the count.
+  reset:
+    description: Stop the timer and reset the pulse count to zero.
+output_notices:
+  pulse:
+    description: 'Emitted each cycle. Payload key: count (int, 1-based).'
+  done:
+    description: Emitted when all cycles complete. Only published when cycles > 0.
+      Payload: {}.

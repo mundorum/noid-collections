@@ -7,7 +7,11 @@ data:csv-source — reads CSV data and publishes it in two modes:
      `next`  advances the cursor and emits the next row, or `exhausted` at end.
 
 Content can be provided inline via the `content` property or read from a file
-via the `file` property.  `file` takes precedence over `content`.
+via the `input_file` property.  `input_file` takes precedence over `content`.
+
+The optional `sample_size` property limits the number of rows served. If set
+to a positive integer, only the first N rows are visible (in all modes: load,
+first, and next).  0 means no limit.
 
 Notices received:
   load   → publish the full table (label + columns + rows)
@@ -31,12 +35,13 @@ Scene usage example:
     "publish":   "table~pipeline/table;schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
   }
 
-  Or loading from a file:
+  Or loading from a file with a sample limit:
   {
     "type": "data:csv-source",
     "properties": {
-      "label": "patients",
-      "file":  "shared:data/patients.csv"
+      "label":       "patients",
+      "input_file":  "shared:data/patients.csv",
+      "sample_size": 10
     },
     "subscribe": "pipeline/start~load;pipeline/first~first;pipeline/next~next",
     "publish":   "table~pipeline/table;schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
@@ -73,14 +78,18 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
     "description": (
         "Reads CSV data and publishes it in full-table mode "
         "or row-by-row mode with a movable cursor. "
-        "Content can be provided inline or read from a file."
+        "Content can be provided inline or read from a file. "
+        "An optional sample_size limits the number of rows served."
     ),
     "properties": {
         "content": {
             "default": "",
-            "description": "Inline CSV text, including a header row as the first line. Ignored if `file` is set.",
+            "description": (
+                "Inline CSV text, including a header row as the first line. "
+                "Ignored if `input_file` is set."
+            ),
         },
-        "file": {
+        "input_file": {
             "default": "",
             "kind": "resource",
             "description": "Path to a CSV file to read. Takes precedence over `content`.",
@@ -88,6 +97,13 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
         "label": {
             "default": "csv",
             "description": "Label included in every published payload to identify this source.",
+        },
+        "sample_size": {
+            "default": 0,
+            "description": (
+                "Maximum number of rows to serve. 0 means no limit. "
+                "Applies consistently to all modes (load, first, next)."
+            ),
         },
     },
     "receive": {
@@ -128,21 +144,27 @@ class CsvSourceOid(OidComponent):
 
     def _ensure_parsed(self) -> None:
         if not self._parsed:
-            if self.file:
-                with open(self.file, "r", encoding="utf-8") as f:
+            if self.input_file:
+                with open(self.input_file, "r", encoding="utf-8") as f:
                     content = f.read()
             else:
                 content = self.content
             self._columns, self._rows = _parse_csv(content)
             self._parsed = True
 
+    def _effective_rows(self) -> List[Dict[str, str]]:
+        """Return rows capped to sample_size (0 = no cap)."""
+        n = int(self.sample_size) if self.sample_size else 0
+        return self._rows[:n] if n > 0 else self._rows
+
     async def handle_load(self, notice: str, message: dict) -> None:
         """Publish the entire CSV as a structured table."""
         self._ensure_parsed()
+        rows = self._effective_rows()
         await self._notify("table", {
             "label":   self.label,
             "columns": self._columns,
-            "rows":    self._rows,
+            "rows":    rows,
         })
 
     async def handle_first(self, notice: str, message: dict) -> None:
@@ -150,11 +172,12 @@ class CsvSourceOid(OidComponent):
         self._ensure_parsed()
         self._cursor = 0
         await self._notify("schema", {"label": self.label, "columns": self._columns})
-        if self._rows:
+        rows = self._effective_rows()
+        if rows:
             await self._notify("row", {
                 "label": self.label,
                 "index": 0,
-                "row":   self._rows[0],
+                "row":   rows[0],
             })
         else:
             await self._notify("exhausted", {"label": self.label})
@@ -163,11 +186,12 @@ class CsvSourceOid(OidComponent):
         """Advance cursor and publish the next row, or signal exhaustion."""
         self._ensure_parsed()
         self._cursor += 1
-        if 0 <= self._cursor < len(self._rows):
+        rows = self._effective_rows()
+        if 0 <= self._cursor < len(rows):
             await self._notify("row", {
                 "label": self.label,
                 "index": self._cursor,
-                "row":   self._rows[self._cursor],
+                "row":   rows[self._cursor],
             })
         else:
             await self._notify("exhausted", {"label": self.label})

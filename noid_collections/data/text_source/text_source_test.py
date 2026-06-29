@@ -54,7 +54,7 @@ async def test_text_source_loads_from_file() -> None:
         comp = TextSourceOid(
             bus=bus,
             subscribe="test/load~load",
-            properties={"file": path, "label": "file-src"},
+            properties={"input_file": path, "label": "file-src"},
         )
         await comp.start()
         await bus.publish("test/load", {})
@@ -78,7 +78,7 @@ async def test_text_source_file_takes_precedence_over_text() -> None:
         comp = TextSourceOid(
             bus=bus,
             subscribe="test/load~load",
-            properties={"text": "Inline text.", "file": path, "label": "src"},
+            properties={"text": "Inline text.", "input_file": path, "label": "src"},
         )
         await comp.start()
         await bus.publish("test/load", {})
