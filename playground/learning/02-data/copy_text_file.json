@@ -16,7 +16,7 @@
       "id":   "src",
       "properties": {
         "label": "dinosaur",
-        "file":  "scene:dinosaur.txt"
+        "input_file":  "scene:dinosaur.txt"
       },
       "subscribe": "player/start~load",
       "publish": "text~pipeline/text;done~pipeline/done"

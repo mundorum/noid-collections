@@ -10,7 +10,7 @@
       "id":   "src",
       "properties": {
         "label": "dinosaur",
-        "text":  "The dinosaur jumped into the mud."
+        "content":  "The dinosaur jumped into the mud."
       },
       "subscribe": "player/start~load",
       "publish": "text~pipeline/text"

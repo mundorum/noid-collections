@@ -1,16 +1,16 @@
 id: data:text-source
 name: Text Source
 description: Publishes text content as a message whenever a load notice arrives. Content
-  can be provided inline via the text property or read from a file. To auto-start,
+  can be provided inline via the content property or read from a file. To auto-start,
   wire player/start to the load notice in the scene.
 properties:
-  text:
+  content:
     description: Inline text content to publish. Ignored if `input_file` is set.
     default: ''
     required: false
   input_file:
     description: Path to a text file whose content is published. Takes precedence
-      over `text`.
+      over `content`.
     default: ''
     required: false
   label:
@@ -20,7 +20,7 @@ properties:
 input_notices:
   load:
     description: Loads and publishes the text content (from input_file if set, else
-      from the text property).
+      from the content property).
 output_notices:
   text:
     description: 'Emitted when loaded. Payload keys: label (str), content (str).'

@@ -14,7 +14,7 @@ async def test_text_source_publishes_on_load() -> None:
     comp = TextSourceOid(
         bus=bus,
         subscribe="test/load~load",
-        properties={"text": "Hello world", "label": "intro"},
+        properties={"content": "Hello world", "label": "intro"},
     )
     await comp.start()
     await bus.publish("test/load", {})
@@ -31,7 +31,7 @@ async def test_text_source_multiple_loads() -> None:
     comp = TextSourceOid(
         bus=bus,
         subscribe="test/t~load",
-        properties={"text": "Repeat", "label": "r"},
+        properties={"content": "Repeat", "label": "r"},
     )
     await comp.start()
     await bus.publish("test/t", {})
@@ -65,7 +65,7 @@ async def test_text_source_loads_from_file() -> None:
         os.unlink(path)
 
 
-async def test_text_source_file_takes_precedence_over_text() -> None:
+async def test_text_source_input_file_takes_precedence_over_content() -> None:
     bus = Bus()
     received = []
     bus.subscribe("data/text/output", lambda t, m: received.append(m))
@@ -78,7 +78,7 @@ async def test_text_source_file_takes_precedence_over_text() -> None:
         comp = TextSourceOid(
             bus=bus,
             subscribe="test/load~load",
-            properties={"text": "Inline text.", "input_file": path, "label": "src"},
+            properties={"content": "Inline text.", "input_file": path, "label": "src"},
         )
         await comp.start()
         await bus.publish("test/load", {})
