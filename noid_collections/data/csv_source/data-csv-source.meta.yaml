@@ -14,8 +14,9 @@ properties:
     default: ''
     required: false
   label:
-    description: Label included in every published payload to identify this source.
-    default: csv
+    description: Optional label included in every published payload to identify this
+      source. If empty (the default), no label key is included in the payload.
+    default: ''
     required: false
   sample_size:
     description: Maximum number of rows to serve. 0 means no limit. Applies consistently

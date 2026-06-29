@@ -108,8 +108,11 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
             "description": "Path to a CSV file to read. Takes precedence over `content`.",
         },
         "label": {
-            "default": "csv",
-            "description": "Label included in every published payload to identify this source.",
+            "default": "",
+            "description": (
+                "Optional label included in every published payload to identify this source. "
+                "If empty (the default), no label key is included in the payload."
+            ),
         },
         "sample_size": {
             "default": 0,
@@ -190,6 +193,10 @@ class CsvSourceOid(OidComponent):
         n = int(self.sample_size) if self.sample_size else 0
         return self._rows[:n] if n > 0 else self._rows
 
+    def _label_payload(self) -> dict:
+        """Return {"label": ...} when a label is configured, else {}."""
+        return {"label": self.label} if self.label else {}
+
     def _row_payload(self, row: Dict[str, str]):
         """Convert a row dict to the configured format."""
         if self.format == "list":
@@ -201,7 +208,7 @@ class CsvSourceOid(OidComponent):
         self._ensure_parsed()
         rows = self._effective_rows()
         await self._notify("table", {
-            "label":   self.label,
+            **self._label_payload(),
             "columns": self._columns,
             "rows":    [self._row_payload(r) for r in rows],
         })
@@ -210,16 +217,16 @@ class CsvSourceOid(OidComponent):
         """Reset cursor, publish schema, then publish the first row."""
         self._ensure_parsed()
         self._cursor = 0
-        await self._notify("schema", {"label": self.label, "columns": self._columns})
+        await self._notify("schema", {**self._label_payload(), "columns": self._columns})
         rows = self._effective_rows()
         if rows:
             await self._notify("row", {
-                "label": self.label,
+                **self._label_payload(),
                 "index": 1,
                 "row":   self._row_payload(rows[0]),
             })
         else:
-            await self._notify("exhausted", {"label": self.label})
+            await self._notify("exhausted", self._label_payload())
 
     async def handle_next(self, notice: str, message: dict) -> None:
         """Advance cursor and publish the next row, or signal exhaustion."""
@@ -228,9 +235,9 @@ class CsvSourceOid(OidComponent):
         rows = self._effective_rows()
         if 0 <= self._cursor < len(rows):
             await self._notify("row", {
-                "label": self.label,
+                **self._label_payload(),
                 "index": self._cursor + 1,
                 "row":   self._row_payload(rows[self._cursor]),
             })
         else:
-            await self._notify("exhausted", {"label": self.label})
+            await self._notify("exhausted", self._label_payload())

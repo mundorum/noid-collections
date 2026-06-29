@@ -23,9 +23,11 @@
       "type": "data:csv-source",
       "id":   "src",
       "properties": {
-        "input_file": "scene:zombie-health-age-days-recovery.csv"
+        "input_file": "scene:zombie-health-age-days-recovery.csv",
+        "format": "list",
+        "sample_size": 3
       },
-      "subscribe": "pipeline/tick~next",
+      "subscribe": "player/start~first;pipeline/tick~next",
       "publish": "schema~pipeline/schema;row~pipeline/row;exhausted~player/done"
     },
     {
