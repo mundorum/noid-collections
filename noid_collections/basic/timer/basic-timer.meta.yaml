@@ -23,5 +23,5 @@ output_notices:
   pulse:
     description: 'Emitted each cycle. Payload key: count (int, 1-based).'
   done:
-    description: Emitted when all cycles complete. Only published when cycles > 0.
-      Payload: {}.
+    description: 'Emitted when all cycles complete. Only published when cycles > 0.
+      Payload: {}.'

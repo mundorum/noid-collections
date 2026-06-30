@@ -8,6 +8,7 @@ properties:
       payload.
     default: ''
     required: false
+    kind: resource
   output_mode:
     description: 'Dispatch mode: complete (one text notice) or page_by_page (one page
       notice; MarkItDown has no page boundaries so total is always 1).'

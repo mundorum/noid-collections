@@ -7,6 +7,7 @@ properties:
     description: Destination file path (required).
     default: ''
     required: false
+    kind: resource
   encoding:
     description: File encoding.
     default: utf-8

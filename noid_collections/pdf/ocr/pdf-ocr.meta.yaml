@@ -7,10 +7,12 @@ properties:
     description: Path to the input PDF. Can be overridden by the ocr notice payload.
     default: ''
     required: false
+    kind: resource
   output_file:
     description: Path for the OCR'd output PDF. If empty, a temporary file is created.
     default: ''
     required: false
+    kind: resource
   language:
     description: Tesseract language code (e.g. eng, por, fra).
     default: eng

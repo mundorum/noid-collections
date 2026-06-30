@@ -9,6 +9,7 @@ properties:
       payload.
     default: ''
     required: false
+    kind: resource
   output_mode:
     description: 'Dispatch mode: complete (one text notice with all pages joined)
       or page_by_page (one page notice per page).'
