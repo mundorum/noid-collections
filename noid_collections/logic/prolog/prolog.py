@@ -105,6 +105,7 @@ def _run_prolog(program: str, goal: str) -> list:
     "properties": {
         "facts_rules": {
             "default": "",
+            "kind": "text",
             "description": "Prolog program text (facts and rules) loaded before every query.",
         },
     },

@@ -53,6 +53,9 @@ from noid.core.component import Noid, OidComponent
         # File-path properties: add "kind": "resource" so NoidPlayer resolves
         # namespace-prefixed values (e.g. "shared:data/file.csv") to absolute paths.
         "path_key": {"default": "", "kind": "resource", "description": "..."},
+        # Multiline-text properties: add "kind": "text" so the platform editor
+        # renders a resizable textarea instead of a single-line input.
+        "text_key": {"default": "", "kind": "text", "description": "..."},
     },
     "receive":   ["notice"],     # required for handler dispatch
     "subscribe": "topic~notice", # bus topic → internal notice  (;-separated)
@@ -182,3 +185,4 @@ Before submitting any component:
 - [ ] Tests use `Bus()` (not `Bus.i`)
 - [ ] No web framework imports in component code
 - [ ] File-path properties declare `"kind": "resource"` so the player can resolve namespace-prefixed values
+- [ ] Multiline-text properties declare `"kind": "text"` so the platform editor renders a textarea

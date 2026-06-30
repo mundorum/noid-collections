@@ -8,11 +8,13 @@ properties:
     description: Inline text content to publish. Ignored if `input_file` is set.
     default: ''
     required: false
+    kind: text
   input_file:
     description: Path to a text file whose content is published. Takes precedence
       over `content`.
     default: ''
     required: false
+    kind: resource
   label:
     description: Label included in the published payload to identify this source.
     default: text

@@ -8,6 +8,7 @@ properties:
     description: Prolog program text (facts and rules) loaded before every query.
     default: ''
     required: false
+    kind: text
 input_notices:
   query:
     description: 'Prolog goal to execute. Payload keys: query (str, the goal), facts_rules

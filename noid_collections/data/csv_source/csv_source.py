@@ -97,6 +97,7 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
     "properties": {
         "content": {
             "default": "",
+            "kind": "text",
             "description": (
                 "Inline CSV text, including a header row as the first line. "
                 "Ignored if `input_file` is set."

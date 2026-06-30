@@ -16,6 +16,7 @@ properties:
       as {placeholder} substitutions.
     default: '{input}'
     required: false
+    kind: text
   temperature:
     description: Sampling temperature (0 = deterministic, higher = more creative).
     default: 0.1

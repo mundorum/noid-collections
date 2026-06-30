@@ -43,6 +43,7 @@ from noid.core.component import Noid, OidComponent
     "properties": {
         "content": {
             "default": "",
+            "kind": "text",
             "description": "Inline text content to publish. Ignored if `input_file` is set.",
         },
         "input_file": {

@@ -26,6 +26,7 @@ from noid.core.component import Noid, OidComponent
         },
         "prompt_template": {
             "default": "{input}",
+            "kind": "text",
             "description": (
                 "Prompt template. Supports {input}, {question}, and any message "
                 "key as {placeholder} substitutions."

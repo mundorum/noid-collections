@@ -9,10 +9,12 @@ properties:
       if `input_file` is set.
     default: ''
     required: false
+    kind: text
   input_file:
     description: Path to a CSV file to read. Takes precedence over `content`.
     default: ''
     required: false
+    kind: resource
   label:
     description: Optional label included in every published payload to identify this
       source. If empty (the default), no label key is included in the payload.
