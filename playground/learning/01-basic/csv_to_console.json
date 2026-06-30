@@ -1,8 +1,8 @@
 {
   "title": "Text source → console display",
   "imports": [
-    "../../../noid_collections/data/csv_source/csv_source.py",
-    "../../../noid_collections/basic/console_display/console_display.py"
+    "noid:data.csv_source",
+    "noid:basic.console_display"
   ],
   "components": [
     {

@@ -1,0 +1,7 @@
+version: "1"
+
+namespaces:
+  noid:
+    kind: module
+    root: "noid_collections"
+    description: "noid component collections in this project"

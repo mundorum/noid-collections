@@ -1,14 +1,8 @@
 {
   "title": "Copy text source",
-  "namespaces": {
-    "scene": {
-      "kind": "resource",
-      "root": "."
-    }
-  },
   "imports": [
-    "../../../noid_collections/data/text_source/text_source.py",
-    "../../../noid_collections/data/text_writer/text_writer.py"
+    "noid:data.text_source",
+    "noid:data.text_writer"
   ],
   "components": [
     {

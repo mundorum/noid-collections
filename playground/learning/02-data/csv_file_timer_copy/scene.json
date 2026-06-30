@@ -1,0 +1,38 @@
+{
+  "title": "Text source → console display",
+  "imports": [
+    "noid:basic.timer",
+    "noid:data.csv_source",
+    "noid:data.csv_source"
+  ],
+  "components": [
+    {
+      "type": "basic:timer",
+      "id": "timer",
+      "properties": {"period": 1.0},
+      "subscribe": "player/start~start",
+      "publish":   "pulse~pipeline/tick"
+    },
+    {
+      "type": "data:csv-source",
+      "id":   "src",
+      "properties": {
+        "input_file": "scene:zombie-health-age-days-recovery.csv",
+        "format": "list",
+        "sample_size": 3
+      },
+      "subscribe": "player/start~first;pipeline/tick~next",
+      "publish": "schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/done"
+    },
+    {
+      "type": "data:csv-writer",
+      "id":   "target",
+      "properties": {
+        "output_file": "scene:zombie-health-age-days-recovery-copy.csv",
+        "format": "list"
+      },
+      "subscribe": "pipeline/schema~schema;pipeline/row~row;pipeline/done~done",
+      "publish":   "written~player/done"
+    }
+  ]
+}
