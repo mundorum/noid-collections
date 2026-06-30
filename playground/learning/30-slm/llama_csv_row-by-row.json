@@ -1,9 +1,9 @@
 {
   "title": "LM Agents demo — CSV row-by-row through LM",
   "imports": [
-    "noid:data.csv_source.",
-    "noid:lm_agents.lm.",
-    "noid:basic.console_display."
+    "noid:data.csv_source",
+    "noid:lm_agents.lm",
+    "noid:basic.console_display"
   ],
   "components": [
     {
