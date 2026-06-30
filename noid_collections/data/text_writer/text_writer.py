@@ -1,5 +1,5 @@
 """
-data:file-writer — write text messages received on the bus to a file.
+data:text-writer — write text messages received on the bus to a file.
 
 Accepts two input modes, mirroring the output modes of pdf:extractor-* and
 pdf:postprocessor:
@@ -30,7 +30,7 @@ Published notices:
 
 Scene usage:
     {
-      "type": "data:file-writer",
+      "type": "data:text-writer",
       "id":   "writer",
       "properties": {
         "output_file": "output/result.md"
@@ -46,8 +46,8 @@ from noid.core.component import Noid, OidComponent
 
 
 @Noid.component({
-    "id": "data:file-writer",
-    "name": "File Writer",
+    "id": "data:text-writer",
+    "name": "Text Writer",
     "description": (
         "Buffers incoming text or page notices and writes them to a file "
         "when a done notice is received."
@@ -89,7 +89,7 @@ from noid.core.component import Noid, OidComponent
         },
     },
 })
-class FileWriterOid(OidComponent):
+class TextWriterOid(OidComponent):
     """Buffers incoming text/page notices and writes them to a file on done."""
 
     def __init__(self, **kwargs):

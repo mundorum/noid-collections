@@ -38,12 +38,12 @@ COLLECTIONS: list[dict] = [
         "description": "Read CSV files row by row.",
     },
     {
-        "name": "Data — File Writer",
+        "name": "Data — Text Writer",
         "pip_extra": None,
         "modules": [
-            "noid_collections.data.file_writer.file_writer",
+            "noid_collections.data.text_writer.text_writer",
         ],
-        "description": "Write output to files.",
+        "description": "Write text output to files.",
     },
     {
         "name": "Data — SQL",

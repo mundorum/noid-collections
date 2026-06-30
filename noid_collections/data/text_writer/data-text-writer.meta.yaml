@@ -1,5 +1,5 @@
-id: data:file-writer
-name: File Writer
+id: data:text-writer
+name: Text Writer
 description: Buffers incoming text or page notices and writes them to a file when
   a done notice is received.
 properties:

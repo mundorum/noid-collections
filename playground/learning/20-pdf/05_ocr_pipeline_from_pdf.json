@@ -4,7 +4,7 @@
     "../../../noid_collections/pdf/ocr/ocr.py",
     "../../../noid_collections/pdf/extractor_pymupdf/extractor_pymupdf.py",
     "../../../noid_collections/pdf/postprocessor/postprocessor.py",
-    "../../../noid_collections/data/file_writer/file_writer.py",
+    "../../../noid_collections/data/text_writer/text_writer.py",
     "../../../noid_collections/basic/console_display/console_display.py"
   ],
   "components": [
@@ -34,7 +34,7 @@
       "publish":   "text~pipeline/clean;done~pipeline/clean-done;status~pipeline/status"
     },
     {
-      "type": "data:file-writer",
+      "type": "data:text-writer",
       "id":   "writer",
       "properties": {
         "output_file": "playground/learning/20-pdf/text/case_teaching_in_medicine_1906_ocr.md"
