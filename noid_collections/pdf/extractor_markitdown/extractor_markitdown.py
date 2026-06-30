@@ -67,7 +67,7 @@ from noid.core.component import Noid, OidComponent
             "description": "Trigger text extraction. Payload key file (str) overrides the input_file property.",
         },
     },
-    "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/extractor/status",
+    "publish": "text~pdf/text;page~pdf/page;done~pdf/done;error~pdf/error;status~pdf/status",
     "output_notices": {
         "text": {
             "description": "Extracted Markdown content (complete mode). Keys: file (str), content (str), pages (null).",

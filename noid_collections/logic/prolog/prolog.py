@@ -116,7 +116,7 @@ def _run_prolog(program: str, goal: str) -> list:
             ),
         },
     },
-    "publish": "result~slm/prolog/result;error~slm/prolog/error;done~slm/prolog/done",
+    "publish": "result~prolog/result;error~prolog/error;done~prolog/done",
     "output_notices": {
         "result": {
             "description": (

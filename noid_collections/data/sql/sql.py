@@ -58,7 +58,7 @@ from noid.core.component import Noid, OidComponent
             ),
         },
     },
-    "publish": "result~slm/sql/result;error~slm/sql/error",
+    "publish": "result~sql/result;error~sql/error",
     "output_notices": {
         "result": {
             "description": (

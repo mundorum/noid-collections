@@ -139,10 +139,10 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
         },
     },
     "publish": (
-        "table~data/csv/table"
-        ";schema~data/csv/schema"
-        ";row~data/csv/row"
-        ";exhausted~data/csv/exhausted"
+        "table~csv/table"
+        ";schema~csv/schema"
+        ";row~csv/row"
+        ";exhausted~csv/exhausted"
     ),
     "output_notices": {
         "table": {

@@ -78,7 +78,7 @@ from noid.core.component import Noid, OidComponent
             "description": "Trigger OCR. Payload key file (str) overrides the input_file property.",
         },
     },
-    "publish": "done~pdf/ocr/done;error~pdf/ocr/error;status~pdf/ocr/status",
+    "publish": "done~ocr/done;error~ocr/error;status~ocr/status",
     "output_notices": {
         "done": {
             "description": "OCR complete. Payload key: file (str) — path to the output PDF.",

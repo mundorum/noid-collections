@@ -68,7 +68,7 @@ from noid.core.component import Noid, OidComponent
         "stop":  {"description": "Pause the timer without resetting the count."},
         "reset": {"description": "Stop the timer and reset the pulse count to zero."},
     },
-    "publish": "pulse~basic/timer/pulse;done~basic/timer/done",
+    "publish": "pulse~timer/pulse;done~timer/done",
     "output_notices": {
         "pulse": {
             "description": "Emitted each cycle. Payload key: count (int, 1-based).",

@@ -82,7 +82,7 @@ from noid.core.component import Noid, OidComponent
             "description": "Triggers the file write and emits the written notice.",
         },
     },
-    "publish": "written~data/file/written",
+    "publish": "written~file/written",
     "output_notices": {
         "written": {
             "description": "Emitted after the file is flushed to disk. Payload key: file (str).",

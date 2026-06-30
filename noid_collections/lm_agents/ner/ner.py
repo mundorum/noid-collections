@@ -78,7 +78,7 @@ def _get_pipeline(model: str, aggregation_strategy: str):
             ),
         },
     },
-    "publish": "entities~slm/ner/output",
+    "publish": "entities~ner/output",
     "output_notices": {
         "entities": {
             "description": (

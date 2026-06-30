@@ -295,11 +295,11 @@ def postprocess_markdown(text: str, use_spellcheck: bool = True) -> Tuple[str, d
         },
     },
     "publish": (
-        "text~pdf/processed/text"
-        ";page~pdf/processed/page"
-        ";done~pdf/processed/done"
-        ";error~pdf/processed/error"
-        ";status~pdf/postprocessor/status"
+        "text~post/text"
+        ";page~post/page"
+        ";done~post/done"
+        ";error~post/error"
+        ";status~post/status"
     ),
     "output_notices": {
         "text": {

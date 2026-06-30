@@ -58,7 +58,7 @@ from noid.core.component import Noid, OidComponent
     "receive": {
         "load": {"description": "Loads and publishes the text content (from input_file if set, else from the content property)."},
     },
-    "publish": "text~data/text/output;done~data/text/done",
+    "publish": "text~text/output;done~text/done",
     "output_notices": {
         "text": {
             "description": (

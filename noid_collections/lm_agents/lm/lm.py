@@ -44,7 +44,7 @@ from noid.core.component import Noid, OidComponent
             ),
         },
     },
-    "publish": "output~lm/lm/output",
+    "publish": "output~lm/output",
     "output_notices": {
         "output": {
             "description": "LLM reply. Payload keys: content (str), model (str).",
