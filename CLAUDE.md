@@ -186,3 +186,4 @@ Before submitting any component:
 - [ ] No web framework imports in component code
 - [ ] File-path properties declare `"kind": "resource"` so the player can resolve namespace-prefixed values
 - [ ] Multiline-text properties declare `"kind": "text"` so the platform editor renders a textarea
+- [ ] Run `noid-collections-extract-meta <module.py>` (or `--all`) to refresh `.meta.yaml` and add the component to `collections.json` / `manifest.COLLECTIONS`

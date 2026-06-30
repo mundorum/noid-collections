@@ -3,7 +3,7 @@
   "imports": [
     "noid:basic.timer",
     "noid:data.csv_source",
-    "noid:data.csv_source"
+    "noid:data.csv_writer"
   ],
   "components": [
     {

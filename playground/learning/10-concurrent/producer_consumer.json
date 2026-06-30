@@ -3,7 +3,7 @@
   "imports": [
     "producer.py",
     "consumer.py",
-    "../../../noid_collections/basic/console_display/console_display.py"
+    "noid:basic.console_display"
   ],
   "components": [
     {

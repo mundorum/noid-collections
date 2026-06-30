@@ -25,6 +25,9 @@ dependencies = [
 Homepage = "https://github.com/mundorum/noid-collections"
 Repository = "https://github.com/mundorum/noid-collections"
 
+[project.scripts]
+noid-collections-extract-meta = "noid_collections.manifest_sync:_cli"
+
 [project.optional-dependencies]
 # Ollama-backed LLM agent (lm:lm-agent) — lightweight
 lm = [
@@ -64,6 +67,9 @@ all = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["noid_collections*"]
+
+[tool.setuptools.package-data]
+noid_collections = ["collections.json"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
