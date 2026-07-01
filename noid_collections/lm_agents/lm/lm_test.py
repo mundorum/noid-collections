@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from noid.core.bus import Bus
-from noid_collections.lm_agents.lm.lm import LMAgentOid, _resolve_path, _set_path
+from noid_collections.lm_agents.lm.lm import LMAgentOid, _resolve_path
 
 
 @contextmanager
@@ -21,12 +21,12 @@ def _fake_ollama(reply: str):
         yield fake_client
 
 
-async def test_lm_agent_publishes_output() -> None:
+async def test_lm_agent_publishes_document() -> None:
     bus = Bus()
     received = []
-    bus.subscribe("lm/output", lambda t, m: received.append(m))
+    bus.subscribe("lm/document", lambda t, m: received.append(m))
 
-    comp = LMAgentOid(bus=bus, subscribe="test/lm/in~input", publish="output~lm/output")
+    comp = LMAgentOid(bus=bus, subscribe="test/lm/in~input", publish="document~lm/document")
     await comp.start()
 
     with _fake_ollama("The answer is 42."):
@@ -76,16 +76,16 @@ async def test_lm_render_template_missing_path_is_empty() -> None:
     assert rendered == ""
 
 
-async def test_lm_append_field_top_level() -> None:
+async def test_lm_csv_field_document_mode() -> None:
     bus = Bus()
     received = []
-    bus.subscribe("lm/output", lambda t, m: received.append(m))
+    bus.subscribe("lm/document", lambda t, m: received.append(m))
 
     comp = LMAgentOid(
         bus=bus,
         subscribe="test/lm/in~input",
-        publish="output~lm/output",
-        properties={"append_field": "comment"},
+        publish="document~lm/document",
+        properties={"csv_field": "comment"},
     )
     await comp.start()
 
@@ -100,55 +100,136 @@ async def test_lm_append_field_top_level() -> None:
     await comp.stop()
 
 
-async def test_lm_append_field_nested() -> None:
+async def test_lm_csv_field_document_mode_does_not_mutate_input() -> None:
     bus = Bus()
     received = []
-    bus.subscribe("lm/output", lambda t, m: received.append(m))
+    bus.subscribe("lm/document", lambda t, m: received.append(m))
 
     comp = LMAgentOid(
         bus=bus,
         subscribe="test/lm/in~input",
-        publish="output~lm/output",
-        properties={"append_field": "row.comment"},
+        publish="document~lm/document",
+        properties={"csv_field": "comment"},
     )
     await comp.start()
 
-    input_msg = {
+    original = {"index": 1, "content": "hi"}
+    with _fake_ollama("reply"):
+        await bus.publish("test/lm/in", original)
+
+    assert "comment" not in original
+
+    await comp.stop()
+
+
+async def test_lm_schema_adds_csv_field_column() -> None:
+    bus = Bus()
+    received = []
+    bus.subscribe("lm/schema", lambda t, m: received.append(m))
+
+    comp = LMAgentOid(
+        bus=bus,
+        subscribe="test/lm/schema~schema",
+        publish="schema~lm/schema",
+        properties={"csv_field": "comment"},
+    )
+    await comp.start()
+
+    await bus.publish("test/lm/schema", {"label": "patients", "columns": ["name", "age"]})
+
+    assert received == [{"label": "patients", "columns": ["name", "age", "comment"]}]
+
+    await comp.stop()
+
+
+async def test_lm_schema_ignored_without_csv_field() -> None:
+    bus = Bus()
+    received = []
+    bus.subscribe("lm/schema", lambda t, m: received.append(m))
+
+    comp = LMAgentOid(bus=bus, subscribe="test/lm/schema~schema", publish="schema~lm/schema")
+    await comp.start()
+
+    await bus.publish("test/lm/schema", {"columns": ["name", "age"]})
+
+    assert received == []
+
+    await comp.stop()
+
+
+async def test_lm_row_adds_reply_below_row() -> None:
+    bus = Bus()
+    received = []
+    bus.subscribe("lm/row", lambda t, m: received.append(m))
+
+    comp = LMAgentOid(
+        bus=bus,
+        subscribe="test/lm/row~row",
+        publish="row~lm/row",
+        properties={
+            "csv_field": "comment",
+            "prompt_template": "Patient: {row.name}, age {row.age}",
+        },
+    )
+    await comp.start()
+
+    row_msg = {
+        "label": "patients",
         "index": 1,
-        "row": {"name": "Rot Donnadd", "age": "43", "days_recovery": "9"},
+        "row": {"name": "Rot Donnadd", "age": "43"},
     }
-    with _fake_ollama("This is a strange name."):
-        await bus.publish("test/lm/in", input_msg)
+    with _fake_ollama("This is a strange name.") as client:
+        await bus.publish("test/lm/row", row_msg)
+
+    assert client.chat.call_args.kwargs["messages"][0]["content"] == (
+        "Patient: Rot Donnadd, age 43"
+    )
 
     assert len(received) == 1
     out = received[0]
+    assert out["label"] == "patients"
     assert out["index"] == 1
     assert out["row"]["name"] == "Rot Donnadd"
     assert out["row"]["age"] == "43"
-    assert out["row"]["days_recovery"] == "9"
     assert out["row"]["comment"] == "This is a strange name."
 
     await comp.stop()
 
 
-async def test_lm_append_field_does_not_mutate_input() -> None:
+async def test_lm_row_does_not_mutate_input() -> None:
     bus = Bus()
     received = []
-    bus.subscribe("lm/output", lambda t, m: received.append(m))
+    bus.subscribe("lm/row", lambda t, m: received.append(m))
 
     comp = LMAgentOid(
         bus=bus,
-        subscribe="test/lm/in~input",
-        publish="output~lm/output",
-        properties={"append_field": "row.comment"},
+        subscribe="test/lm/row~row",
+        publish="row~lm/row",
+        properties={"csv_field": "comment"},
     )
     await comp.start()
 
     original = {"index": 1, "row": {"name": "Alice"}}
     with _fake_ollama("reply"):
-        await bus.publish("test/lm/in", original)
+        await bus.publish("test/lm/row", original)
 
-    assert "comment" not in original.get("row", {})
+    assert "comment" not in original["row"]
+
+    await comp.stop()
+
+
+async def test_lm_row_ignored_without_csv_field() -> None:
+    bus = Bus()
+    received = []
+    bus.subscribe("lm/row", lambda t, m: received.append(m))
+
+    comp = LMAgentOid(bus=bus, subscribe="test/lm/row~row", publish="row~lm/row")
+    await comp.start()
+
+    with _fake_ollama("reply"):
+        await bus.publish("test/lm/row", {"index": 1, "row": {"name": "Alice"}})
+
+    assert received == []
 
     await comp.stop()
 
@@ -175,16 +256,3 @@ def test_resolve_path_missing() -> None:
     obj = {"row": {"name": "Alice"}}
     assert _resolve_path(obj, "row.missing") == ""
     assert _resolve_path(obj, "other.field") == ""
-
-
-def test_set_path_existing_nested() -> None:
-    obj = {"row": {"name": "Alice"}}
-    _set_path(obj, "row.comment", "hello")
-    assert obj["row"]["comment"] == "hello"
-    assert obj["row"]["name"] == "Alice"
-
-
-def test_set_path_creates_intermediate() -> None:
-    obj = {}
-    _set_path(obj, "a.b.c", "value")
-    assert obj["a"]["b"]["c"] == "value"

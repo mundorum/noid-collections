@@ -24,7 +24,7 @@
         "model": "dslim/bert-base-NER"
       },
       "subscribe": "pipeline/text-in~text",
-      "publish":   "entities~pipeline/ner-out"
+      "publish":   "document~pipeline/ner-out"
     },
     {
       "type": "basic:console-display",

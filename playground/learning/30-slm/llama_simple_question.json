@@ -24,7 +24,7 @@
         "prompt_template": "Answer briefly: {input}"
       },
       "subscribe": "pipeline/input~input",
-      "publish":   "output~pipeline/lm-out"
+      "publish":   "document~pipeline/lm-out"
     },
     {
       "type": "basic:console-display",

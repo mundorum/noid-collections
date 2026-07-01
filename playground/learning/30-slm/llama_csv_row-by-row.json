@@ -24,7 +24,7 @@
         "prompt_template": "Given this patient data: {row}\nWhat might be the diagnosis? Answer in one sentence."
       },
       "subscribe": "pipeline/row~input",
-      "publish":   "output~pipeline/lm-out"
+      "publish":   "document~pipeline/lm-out"
     },
     {
       "type": "basic:console-display",

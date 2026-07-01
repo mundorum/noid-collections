@@ -12,11 +12,36 @@ properties:
     description: 'Entity aggregation strategy: simple, first, average, or max.'
     default: simple
     required: false
+  text_field:
+    description: Key holding the text to analyze — read from the flat message in single-item
+      mode, or from `row` in CSV mode.
+    default: content
+    required: false
+  csv_field:
+    description: 'Field name added directly below `row` (no dotted paths). Setting
+      this property switches the component into CSV mode: `schema` and `row` notices
+      are handled, and the `document` output carries the enriched input dict (entities
+      serialized as JSON) instead of {text, entities}. Must not be set for plain,
+      non-CSV usage — it has no default value.'
+    required: true
 input_notices:
   text:
-    description: 'Input text to analyze. Payload key: content (str). Also accepts
-      a plain string.'
+    description: 'Input text to analyze on a single item. Payload key: text_field
+      (str, default key ''content''). Also accepts a plain string.'
+  schema:
+    description: 'CSV column schema. Payload keys: label (optional), columns (list
+      of str). Ignored if `csv_field` is not set.'
+  row:
+    description: 'One CSV row. Payload keys: label (optional), index (optional), row
+      (dict). Ignored if `csv_field` is not set.'
 output_notices:
-  entities:
-    description: 'Recognized entities. Payload keys: text (str, original input), entities
-      (list of {text, entity_type, start, end, score}).'
+  document:
+    description: 'Recognized entities for a single item. When csv_field is not set:
+      {text (str), entities (list of {text, entity_type, start, end, score})}. When
+      set: enriched input dict with entities serialized as a JSON string.'
+  schema:
+    description: Input schema with csv_field appended to columns. Emitted in response
+      to the schema notice.
+  row:
+    description: Input row with the recognized entities (serialized as JSON) added
+      under row[csv_field]. label/index are passed through unchanged.

@@ -38,29 +38,54 @@ from noid.core.component import Noid, OidComponent
             "default": 0.1,
             "description": "Sampling temperature (0 = deterministic, higher = more creative).",
         },
-        "append_field": {
-            "default": "",
+        "csv_field": {
             "description": (
-                "Dot-separated path (e.g. 'row.comment') where the LM reply is inserted "
-                "into the input message. When set, the output is the enriched input dict. "
-                "When empty, the output is {content, model}."
+                "Field name added directly below `row` (no dotted paths). Setting this "
+                "property switches the component into CSV mode: `schema` and `row` "
+                "notices are handled, and the `document` output carries the enriched "
+                "input dict instead of {content, model}. Must not be set for plain, "
+                "non-CSV usage — it has no default value."
             ),
         },
     },
     "receive": {
         "input": {
             "description": (
-                "Triggers LLM inference. Payload keys: content (str), "
+                "Triggers LLM inference on a single item. Payload keys: content (str), "
                 "question (str, optional). Also accepts a plain string."
             ),
         },
-    },
-    "publish": "output~lm/output",
-    "output_notices": {
-        "output": {
+        "schema": {
             "description": (
-                "LLM reply. When append_field is set: enriched input dict. "
+                "CSV column schema. Payload keys: label (optional), columns (list of str). "
+                "Ignored if `csv_field` is not set."
+            ),
+        },
+        "row": {
+            "description": (
+                "One CSV row. Payload keys: label (optional), index (optional), "
+                "row (dict). Ignored if `csv_field` is not set."
+            ),
+        },
+    },
+    "publish": "document~lm/document;schema~lm/schema;row~lm/row",
+    "output_notices": {
+        "document": {
+            "description": (
+                "LLM reply for a single item. When csv_field is set: enriched input dict. "
                 "Otherwise: {content (str), model (str)}."
+            ),
+        },
+        "schema": {
+            "description": (
+                "Input schema with csv_field appended to columns. "
+                "Emitted in response to the schema notice."
+            ),
+        },
+        "row": {
+            "description": (
+                "Input row with the LLM reply added under row[csv_field]. "
+                "label/index are passed through unchanged."
             ),
         },
     },
@@ -69,6 +94,43 @@ class LMAgentOid(OidComponent):
     """Calls an Ollama model with a rendered prompt and publishes the reply."""
 
     async def handle_input(self, notice: str, message: dict) -> None:
+        reply = await self._infer(message)
+
+        csv_field = getattr(self, "csv_field", "")
+        if csv_field and isinstance(message, dict):
+            output = copy.deepcopy(message)
+            output[csv_field] = reply
+            await self._notify("document", output)
+        else:
+            await self._notify("document", {"content": reply, "model": self.model})
+
+    async def handle_schema(self, notice: str, message: dict) -> None:
+        csv_field = getattr(self, "csv_field", "")
+        if not csv_field:
+            return
+        envelope = dict(message) if isinstance(message, dict) else {}
+        columns = list(envelope.get("columns", []))
+        if csv_field not in columns:
+            columns.append(csv_field)
+        envelope["columns"] = columns
+        await self._notify("schema", envelope)
+
+    async def handle_row(self, notice: str, message: dict) -> None:
+        csv_field = getattr(self, "csv_field", "")
+        if not csv_field:
+            return
+
+        reply = await self._infer(message)
+
+        envelope = dict(message) if isinstance(message, dict) else {}
+        row = copy.deepcopy(envelope.get("row", {}))
+        row[csv_field] = reply
+        envelope["row"] = row
+        await self._notify("row", envelope)
+
+    # ------------------------------------------------------------------
+
+    async def _infer(self, message) -> str:
         try:
             import ollama
         except ImportError as exc:
@@ -87,17 +149,7 @@ class LMAgentOid(OidComponent):
             messages=[{"role": "user", "content": prompt}],
             options={"temperature": self.temperature},
         )
-        reply = response["message"]["content"]
-
-        append_field = getattr(self, "append_field", "")
-        if append_field and isinstance(message, dict):
-            output = copy.deepcopy(message)
-            _set_path(output, append_field, reply)
-            await self._notify("output", output)
-        else:
-            await self._notify("output", {"content": reply, "model": self.model})
-
-    # ------------------------------------------------------------------
+        return response["message"]["content"]
 
     @staticmethod
     def _render_template(template: str, input_val: str, question: str, message: dict) -> str:
@@ -121,14 +173,3 @@ def _resolve_path(obj: dict, path: str) -> str:
             return ""
         current = current[part]
     return str(current)
-
-
-def _set_path(obj: dict, path: str, value) -> None:
-    """Set a value at a dot-separated path in a nested dict, creating dicts as needed."""
-    parts = path.split(".")
-    current = obj
-    for part in parts[:-1]:
-        if part not in current or not isinstance(current[part], dict):
-            current[part] = {}
-        current = current[part]
-    current[parts[-1]] = value
