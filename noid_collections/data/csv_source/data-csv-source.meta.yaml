@@ -15,6 +15,11 @@ properties:
     default: ''
     required: false
     kind: resource
+  delimiter:
+    description: Field separator character. Use "\t" for tab-separated files. Must
+      match the delimiter used by any paired data:csv-writer.
+    default: ','
+    required: false
   label:
     description: Optional label included in every published payload to identify this
       source. If empty (the default), no label key is included in the payload.

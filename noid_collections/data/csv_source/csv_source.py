@@ -9,6 +9,14 @@ data:csv-source — reads CSV data and publishes it in two modes:
 Content can be provided inline via the `content` property or read from a file
 via the `input_file` property.  `input_file` takes precedence over `content`.
 
+The `delimiter` property sets the field separator (default ","). Use "\t" for
+tab-separated files. It must match the delimiter used by any paired
+data:csv-writer downstream, the same way `format` must match.
+
+The quote character is not configurable: Python's csv module already handles
+quoting transparently (default quotechar `"`), so there is nothing to detect
+or configure.
+
 The optional `sample_size` property limits the number of rows served. If set
 to a positive integer, only the first N rows are visible (in all modes: load,
 first, and next).  0 means no limit.
@@ -67,11 +75,11 @@ from typing import Dict, List
 from noid.core.component import Noid, OidComponent
 
 
-def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
+def _parse_csv(content: str, delimiter: str = ",") -> tuple[List[str], List[Dict[str, str]]]:
     """Return (columns, rows) from a CSV string.  First line is the header."""
     if not content.strip():
         return [], []
-    reader = csv.DictReader(io.StringIO(content), skipinitialspace=True)
+    reader = csv.DictReader(io.StringIO(content), skipinitialspace=True, delimiter=delimiter)
     columns = [c.strip() for c in (reader.fieldnames or [])]
     rows: List[Dict[str, str]] = []
     for raw_row in reader:
@@ -107,6 +115,13 @@ def _parse_csv(content: str) -> tuple[List[str], List[Dict[str, str]]]:
             "default": "",
             "kind": "resource",
             "description": "Path to a CSV file to read. Takes precedence over `content`.",
+        },
+        "delimiter": {
+            "default": ",",
+            "description": (
+                "Field separator character. Use \"\\t\" for tab-separated files. "
+                "Must match the delimiter used by any paired data:csv-writer."
+            ),
         },
         "label": {
             "default": "",
@@ -186,7 +201,7 @@ class CsvSourceOid(OidComponent):
                     content = f.read()
             else:
                 content = self.content
-            self._columns, self._rows = _parse_csv(content)
+            self._columns, self._rows = _parse_csv(content, self.delimiter)
             self._parsed = True
 
     def _effective_rows(self) -> List[Dict[str, str]]:

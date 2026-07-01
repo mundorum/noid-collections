@@ -20,6 +20,11 @@ properties:
       ordered by columns.'
     default: dict
     required: false
+  delimiter:
+    description: Field separator character. Use "\t" for tab-separated output. Must
+      match the delimiter used by any paired data:csv-source.
+    default: ','
+    required: false
 input_notices:
   table:
     description: 'Complete table payload. (Re)starts the file, discarding any previously

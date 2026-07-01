@@ -20,6 +20,13 @@ Properties:
     output_file — destination file path (required)
     encoding    — file encoding (default: "utf-8")
     format      — "dict" (default) or "list" (compact)
+    delimiter   — field separator (default: ","); use "\t" for tab-separated
+                  output. Must match the delimiter used by any paired
+                  data:csv-source upstream, the same way `format` must match.
+
+The quote character is not configurable: Python's csv module already quotes
+a field only when needed (default quotechar `"`), so there is nothing to
+configure or auto-detect.
 
 Received notices:
     table  — {"columns": [...], "rows": [...]}  complete table; (re)starts the file
@@ -78,6 +85,13 @@ from noid.core.component import Noid, OidComponent
                 "Row payload format, matching data:csv-source. "
                 "'dict' (default): each row is {col: value, ...}. "
                 "'list' (compact): each row is [value, ...] ordered by columns."
+            ),
+        },
+        "delimiter": {
+            "default": ",",
+            "description": (
+                "Field separator character. Use \"\\t\" for tab-separated output. "
+                "Must match the delimiter used by any paired data:csv-source."
             ),
         },
     },
@@ -163,7 +177,7 @@ class CsvWriterOid(OidComponent):
         self._columns = columns
         self._tmp_path = f"{self.output_file}.tmp"
         self._file = open(self._tmp_path, "w", newline="", encoding=self.encoding)
-        self._writer = csv.writer(self._file)
+        self._writer = csv.writer(self._file, delimiter=self.delimiter)
         if columns:
             self._writer.writerow(columns)
 

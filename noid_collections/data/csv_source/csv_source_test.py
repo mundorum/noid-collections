@@ -11,7 +11,7 @@ CSV = "name,age,city\nAlice,30,SP\nBob,25,RJ\nCarol,35,BH"
 async def test_load_publishes_all_rows() -> None:
     bus = Bus()
     tables = []
-    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -32,7 +32,7 @@ async def test_load_publishes_all_rows() -> None:
 async def test_load_compact_format() -> None:
     bus = Bus()
     tables = []
-    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -55,8 +55,8 @@ async def test_load_compact_format() -> None:
 async def test_first_publishes_schema_and_row() -> None:
     bus = Bus()
     schemas, rows = [], []
-    bus.subscribe("data/csv/schema", lambda t, m: schemas.append(m))
-    bus.subscribe("data/csv/row",    lambda t, m: rows.append(m))
+    bus.subscribe("csv/schema", lambda t, m: schemas.append(m))
+    bus.subscribe("csv/row",    lambda t, m: rows.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -78,8 +78,8 @@ async def test_first_publishes_schema_and_row() -> None:
 async def test_next_iterates_rows() -> None:
     bus = Bus()
     rows, exhausted = [], []
-    bus.subscribe("data/csv/row",       lambda t, m: rows.append(m))
-    bus.subscribe("data/csv/exhausted", lambda t, m: exhausted.append(m))
+    bus.subscribe("csv/row",       lambda t, m: rows.append(m))
+    bus.subscribe("csv/exhausted", lambda t, m: exhausted.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -104,7 +104,7 @@ async def test_next_iterates_rows() -> None:
 async def test_empty_csv_exhausted_on_first() -> None:
     bus = Bus()
     exhausted = []
-    bus.subscribe("data/csv/exhausted", lambda t, m: exhausted.append(m))
+    bus.subscribe("csv/exhausted", lambda t, m: exhausted.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -121,7 +121,7 @@ async def test_empty_csv_exhausted_on_first() -> None:
 async def test_load_from_file() -> None:
     bus = Bus()
     tables = []
-    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
         f.write(CSV)
@@ -147,7 +147,7 @@ async def test_load_from_file() -> None:
 async def test_file_takes_precedence_over_content() -> None:
     bus = Bus()
     tables = []
-    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
 
     with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False, encoding="utf-8") as f:
         f.write("x,y\n1,2")
@@ -172,7 +172,7 @@ async def test_file_takes_precedence_over_content() -> None:
 async def test_sample_size_limits_load() -> None:
     bus = Bus()
     tables = []
-    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -191,8 +191,8 @@ async def test_sample_size_limits_load() -> None:
 async def test_sample_size_limits_row_by_row() -> None:
     bus = Bus()
     rows, exhausted = [], []
-    bus.subscribe("data/csv/row",       lambda t, m: rows.append(m))
-    bus.subscribe("data/csv/exhausted", lambda t, m: exhausted.append(m))
+    bus.subscribe("csv/row",       lambda t, m: rows.append(m))
+    bus.subscribe("csv/exhausted", lambda t, m: exhausted.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -215,7 +215,7 @@ async def test_sample_size_limits_row_by_row() -> None:
 async def test_sample_size_zero_means_no_limit() -> None:
     bus = Bus()
     tables = []
-    bus.subscribe("data/csv/table", lambda t, m: tables.append(m))
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
 
     comp = CsvSourceOid(
         bus=bus,
@@ -229,12 +229,31 @@ async def test_sample_size_zero_means_no_limit() -> None:
     await comp.stop()
 
 
+async def test_custom_delimiter() -> None:
+    bus = Bus()
+    tables = []
+    bus.subscribe("csv/table", lambda t, m: tables.append(m))
+
+    tsv = "name\tage\tcity\nAlice\t30\tSP\nBob\t25\tRJ"
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/load~load",
+        properties={"content": tsv, "label": "people", "delimiter": "\t"},
+    )
+    await comp.start()
+    await bus.publish("test/load", {})
+
+    assert tables[0]["columns"] == ["name", "age", "city"]
+    assert tables[0]["rows"][0] == {"name": "Alice", "age": "30", "city": "SP"}
+    await comp.stop()
+
+
 async def test_compact_row_by_row() -> None:
     bus = Bus()
     schemas, rows, exhausted = [], [], []
-    bus.subscribe("data/csv/schema",    lambda t, m: schemas.append(m))
-    bus.subscribe("data/csv/row",       lambda t, m: rows.append(m))
-    bus.subscribe("data/csv/exhausted", lambda t, m: exhausted.append(m))
+    bus.subscribe("csv/schema",    lambda t, m: schemas.append(m))
+    bus.subscribe("csv/row",       lambda t, m: rows.append(m))
+    bus.subscribe("csv/exhausted", lambda t, m: exhausted.append(m))
 
     comp = CsvSourceOid(
         bus=bus,

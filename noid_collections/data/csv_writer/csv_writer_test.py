@@ -260,6 +260,32 @@ async def test_written_fires_once_per_schema_and_row() -> None:
             os.unlink(path)
 
 
+async def test_custom_delimiter() -> None:
+    bus = Bus()
+    path = _tmp_path()
+    try:
+        comp = CsvWriterOid(
+            bus=bus,
+            subscribe="test/table~table;test/done~done",
+            properties={"output_file": path, "delimiter": "\t"},
+        )
+        await comp.start()
+
+        await bus.publish("test/table", {
+            "columns": ["name", "age"],
+            "rows":    [{"name": "Alice", "age": "30"}],
+        })
+        await bus.publish("test/done", {})
+
+        with open(path, newline="", encoding="utf-8") as f:
+            content = f.read()
+        assert content == "name\tage\r\nAlice\t30\r\n"
+        await comp.stop()
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
 async def test_pre_existing_output_file_is_overwritten() -> None:
     bus = Bus()
     path = _tmp_path()
