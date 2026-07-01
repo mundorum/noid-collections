@@ -2,10 +2,12 @@
 lm:lm-agent — LM component backed by Ollama.
 
 The Ollama model can be set at instantiation time via the `model` property.
-The `prompt_template` property accepts {input} and {question} placeholders.
+The `prompt_template` property accepts {input}, {question}, and dotted-path
+placeholders like {row.name} that resolve into nested message fields.
 
 Requires: ollama>=0.3  (pip install ollama)
 """
+import copy
 import re
 
 from noid.core.component import Noid, OidComponent
@@ -28,13 +30,21 @@ from noid.core.component import Noid, OidComponent
             "default": "{input}",
             "kind": "text",
             "description": (
-                "Prompt template. Supports {input}, {question}, and any message "
-                "key as {placeholder} substitutions."
+                "Prompt template. Supports {input}, {question}, flat message keys "
+                "as {key}, and dot-separated paths into nested fields as {row.name}."
             ),
         },
         "temperature": {
             "default": 0.1,
             "description": "Sampling temperature (0 = deterministic, higher = more creative).",
+        },
+        "append_field": {
+            "default": "",
+            "description": (
+                "Dot-separated path (e.g. 'row.comment') where the LM reply is inserted "
+                "into the input message. When set, the output is the enriched input dict. "
+                "When empty, the output is {content, model}."
+            ),
         },
     },
     "receive": {
@@ -48,7 +58,10 @@ from noid.core.component import Noid, OidComponent
     "publish": "output~lm/output",
     "output_notices": {
         "output": {
-            "description": "LLM reply. Payload keys: content (str), model (str).",
+            "description": (
+                "LLM reply. When append_field is set: enriched input dict. "
+                "Otherwise: {content (str), model (str)}."
+            ),
         },
     },
 })
@@ -76,7 +89,13 @@ class LMAgentOid(OidComponent):
         )
         reply = response["message"]["content"]
 
-        await self._notify("output", {"content": reply, "model": self.model})
+        append_field = getattr(self, "append_field", "")
+        if append_field and isinstance(message, dict):
+            output = copy.deepcopy(message)
+            _set_path(output, append_field, reply)
+            await self._notify("output", output)
+        else:
+            await self._notify("output", {"content": reply, "model": self.model})
 
     # ------------------------------------------------------------------
 
@@ -85,8 +104,31 @@ class LMAgentOid(OidComponent):
         result = re.sub(re.escape("{input}"), input_val, template, flags=re.IGNORECASE)
         result = re.sub(re.escape("{question}"), question, result, flags=re.IGNORECASE)
         if isinstance(message, dict):
-            for key, value in message.items():
-                result = re.sub(
-                    re.escape(f"{{{key}}}"), str(value), result, flags=re.IGNORECASE
-                )
+            def _replace(match: re.Match) -> str:
+                key = match.group(1)
+                if key in message:
+                    return str(message[key])
+                return _resolve_path(message, key)
+            result = re.sub(r"\{([^}]+)\}", _replace, result)
         return result
+
+
+def _resolve_path(obj: dict, path: str) -> str:
+    """Walk a dot-separated path in a nested dict; return str value or empty string."""
+    current = obj
+    for part in path.split("."):
+        if not isinstance(current, dict) or part not in current:
+            return ""
+        current = current[part]
+    return str(current)
+
+
+def _set_path(obj: dict, path: str, value) -> None:
+    """Set a value at a dot-separated path in a nested dict, creating dicts as needed."""
+    parts = path.split(".")
+    current = obj
+    for part in parts[:-1]:
+        if part not in current or not isinstance(current[part], dict):
+            current[part] = {}
+        current = current[part]
+    current[parts[-1]] = value

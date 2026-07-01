@@ -1,15 +1,9 @@
 {
   "title": "Text source → console display",
-  "namespaces": {
-    "scene": {
-      "kind": "resource",
-      "root": "."
-    }
-  },
   "imports": [
-    "../../../noid_collections/basic/timer/timer.py",
-    "../../../noid_collections/data/csv_source/csv_source.py",
-    "../../../noid_collections/basic/console_display/console_display.py"
+    "noid:basic.timer",
+    "noid:data.csv_source",
+    "noid:basic.console_display"
   ],
   "components": [
     {
@@ -24,7 +18,6 @@
       "id":   "src",
       "properties": {
         "input_file": "scene:zombie-health-age-days-recovery.csv",
-        "format": "list",
         "sample_size": 3
       },
       "subscribe": "player/start~first;pipeline/tick~next",

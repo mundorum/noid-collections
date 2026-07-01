@@ -12,8 +12,8 @@ properties:
     default: http://localhost:11434
     required: false
   prompt_template:
-    description: Prompt template. Supports {input}, {question}, and any message key
-      as {placeholder} substitutions.
+    description: Prompt template. Supports {input}, {question}, flat message keys
+      as {key}, and dot-separated paths into nested fields as {row.name}.
     default: '{input}'
     required: false
     kind: text
@@ -21,10 +21,17 @@ properties:
     description: Sampling temperature (0 = deterministic, higher = more creative).
     default: 0.1
     required: false
+  append_field:
+    description: Dot-separated path (e.g. 'row.comment') where the LM reply is inserted
+      into the input message. When set, the output is the enriched input dict. When
+      empty, the output is {content, model}.
+    default: ''
+    required: false
 input_notices:
   input:
     description: 'Triggers LLM inference. Payload keys: content (str), question (str,
       optional). Also accepts a plain string.'
 output_notices:
   output:
-    description: 'LLM reply. Payload keys: content (str), model (str).'
+    description: 'LLM reply. When append_field is set: enriched input dict. Otherwise:
+      {content (str), model (str)}.'
