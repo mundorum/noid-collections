@@ -1,8 +1,9 @@
 id: data:csv-writer
 name: CSV Writer
-description: 'Buffers incoming CSV table or row notices and writes them to a file
-  when a done notice is received. Mirrors the two output modes of data:csv-source:
-  complete table (table + done) or row-by-row (schema + row… + done).'
+description: 'Streams incoming CSV table or row notices to a temporary file and atomically
+  publishes it to output_file when a done notice is received. Mirrors the two output
+  modes of data:csv-source: complete table (table + done) or row-by-row (schema +
+  row… + done).'
 properties:
   output_file:
     description: Destination file path (required).
@@ -13,10 +14,6 @@ properties:
     description: File encoding.
     default: utf-8
     required: false
-  append:
-    description: Append to an existing file instead of overwriting.
-    default: false
-    required: false
   format:
     description: 'Row payload format, matching data:csv-source. ''dict'' (default):
       each row is {col: value, ...}. ''list'' (compact): each row is [value, ...]
@@ -25,16 +22,21 @@ properties:
     required: false
 input_notices:
   table:
-    description: 'Complete table payload. Replaces any buffered data. Keys: columns
-      (list of str), rows (list of dicts or lists). Optional label key is ignored.'
+    description: 'Complete table payload. (Re)starts the file, discarding any previously
+      written content. Keys: columns (list of str), rows (list of dicts or lists).
+      Optional label key is ignored.'
   schema:
-    description: 'Column names for row-by-row mode. Resets the row buffer. Key: columns
-      (list of str). Optional label key is ignored.'
+    description: 'Column names for row-by-row mode. (Re)starts the file, discarding
+      any previously written content. Key: columns (list of str). Optional label key
+      is ignored.'
   row:
-    description: 'One data row, accumulated until done. Key: row (dict or list depending
+    description: 'One data row, written immediately. Key: row (dict or list depending
       on format). Optional label and index keys are ignored.'
   done:
-    description: Triggers the file write and emits the written notice.
+    description: Finalizes the file and emits the done notice.
 output_notices:
   written:
-    description: 'Emitted after the file is flushed to disk. Payload key: file (str).'
+    description: Emitted after each physical write (schema/table/row).
+  done:
+    description: 'Emitted once the file is finalized and ready to use. Payload key:
+      file (str).'

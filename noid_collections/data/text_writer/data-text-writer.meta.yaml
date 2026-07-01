@@ -1,7 +1,7 @@
 id: data:text-writer
 name: Text Writer
-description: Buffers incoming text or page notices and writes them to a file when
-  a done notice is received.
+description: Streams incoming document or segment notices to a temporary file and
+  atomically publishes it to output_file when a done notice is received.
 properties:
   output_file:
     description: Destination file path (required).
@@ -12,26 +12,25 @@ properties:
     description: File encoding.
     default: utf-8
     required: false
-  append:
-    description: Append to an existing file instead of overwriting.
-    default: false
-    required: false
-  page_separator:
-    description: Text inserted between accumulated page segments.
+  segment_separator:
+    description: Text inserted between accumulated segments.
     default: '
 
 
       '
     required: false
 input_notices:
-  text:
-    description: 'Complete text content. Buffered until done. Payload key: content
-      (str).'
-  page:
-    description: 'One page of content. Accumulated until done. Payload key: content
+  document:
+    description: 'Complete text content. (Re)starts the file, discarding any previously
+      written content. Payload key: content (str).'
+  segment:
+    description: 'One segment of content, written immediately. Payload key: content
       (str).'
   done:
-    description: Triggers the file write and emits the written notice.
+    description: Finalizes the file and emits the done notice.
 output_notices:
   written:
-    description: 'Emitted after the file is flushed to disk. Payload key: file (str).'
+    description: Emitted after each physical write (document/segment).
+  done:
+    description: 'Emitted once the file is finalized and ready to use. Payload key:
+      file (str).'

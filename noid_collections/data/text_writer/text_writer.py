@@ -4,29 +4,32 @@ data:text-writer — write text messages received on the bus to a file.
 Accepts two input modes, mirroring the output modes of pdf:extractor-* and
 pdf:postprocessor:
 
-  complete     — receives one `text` notice with the full content, then `done`
-  page_by_page — receives N `page` notices (accumulated in memory), then `done`
+  complete     — receives one `document` notice with the full content, then `done`
+  segment_by_segment — receives N `segment` notices (written as they arrive), then `done`
 
-In both cases, the file is written on receipt of the `done` notice, so the
-pipeline downstream of the extractor/postprocessor needs no special handling —
-just subscribe to the same topics for `text` (or `page`) and `done`.
+Segments are written straight to a temporary file (`<output_file>.tmp`) as
+they arrive, so memory usage stays bounded regardless of document size.
+`document` (re)starts the file: any previously written content is discarded.
+On `done`, the temporary file is atomically moved to `output_file` (replacing
+any existing file there), so `output_file` never shows partial content.
 
-Publishes `written` when the file has been flushed to disk, which can be
-wired to `player/done` to terminate a noid-play session.
+Publishes `written` after each physical write, and `done` once the file is
+finalized — `done` can be wired to `player/done` to terminate a noid-play
+session.
 
 Properties:
-    output_file    — destination file path (required)
-    encoding       — file encoding (default: "utf-8")
-    append         — append to existing file instead of overwriting (default: False)
-    page_separator — text inserted between pages in page_by_page mode (default: "\\n\\n")
+    output_file       — destination file path (required)
+    encoding           — file encoding (default: "utf-8")
+    segment_separator — text inserted between accumulated segments (default: "\\n\\n")
 
 Received notices:
-    text — {"content": "..."}   complete text (buffered until done)
-    page — {"content": "..."}   one page (accumulated until done)
-    done — {}                   trigger write + publish written
+    document — {"content": "..."}   complete text; (re)starts the file
+    segment  — {"content": "..."}   one segment, written immediately
+    done     — {}                    finalize the file
 
 Published notices:
-    written — {"file": "<output_file>"}
+    written — {}                          emitted after each physical write (document/segment)
+    done    — {"file": "<output_file>"}   emitted once the file is finalized and ready to use
 
 Scene usage:
     {
@@ -35,12 +38,13 @@ Scene usage:
       "properties": {
         "output_file": "output/result.md"
       },
-      "subscribe": "pipeline/text~text;pipeline/done~done",
-      "publish":   "written~player/done"
+      "subscribe": "pipeline/document~document;pipeline/done~done",
+      "publish":   "done~player/done"
     }
 """
 import asyncio
-from typing import List
+import os
+from typing import Optional, TextIO
 
 from noid.core.component import Noid, OidComponent
 
@@ -49,8 +53,8 @@ from noid.core.component import Noid, OidComponent
     "id": "data:text-writer",
     "name": "Text Writer",
     "description": (
-        "Buffers incoming text or page notices and writes them to a file "
-        "when a done notice is received."
+        "Streams incoming document or segment notices to a temporary file and "
+        "atomically publishes it to output_file when a done notice is received."
     ),
     "properties": {
         "output_file": {
@@ -62,61 +66,87 @@ from noid.core.component import Noid, OidComponent
             "default": "utf-8",
             "description": "File encoding.",
         },
-        "append": {
-            "default": False,
-            "description": "Append to an existing file instead of overwriting.",
-        },
-        "page_separator": {
+        "segment_separator": {
             "default": "\n\n",
-            "description": "Text inserted between accumulated page segments.",
+            "description": "Text inserted between accumulated segments.",
         },
     },
     "receive": {
-        "text": {
-            "description": "Complete text content. Buffered until done. Payload key: content (str).",
+        "document": {
+            "description": (
+                "Complete text content. (Re)starts the file, discarding any "
+                "previously written content. Payload key: content (str)."
+            ),
         },
-        "page": {
-            "description": "One page of content. Accumulated until done. Payload key: content (str).",
+        "segment": {
+            "description": "One segment of content, written immediately. Payload key: content (str).",
         },
         "done": {
-            "description": "Triggers the file write and emits the written notice.",
+            "description": "Finalizes the file and emits the done notice.",
         },
     },
-    "publish": "written~file/written",
+    "publish": "written~file/written;done~file/done",
     "output_notices": {
         "written": {
-            "description": "Emitted after the file is flushed to disk. Payload key: file (str).",
+            "description": "Emitted after each physical write (document/segment).",
+        },
+        "done": {
+            "description": (
+                "Emitted once the file is finalized and ready to use. Payload key: file (str)."
+            ),
         },
     },
 })
 class TextWriterOid(OidComponent):
-    """Buffers incoming text/page notices and writes them to a file on done."""
+    """Streams incoming document/segment notices to a file, finalized atomically on done."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._buffer: List[str] = []
+        self._file: Optional[TextIO] = None
+        self._tmp_path: Optional[str] = None
+        self._first_write = True
 
-    async def handle_text(self, notice: str, message: dict) -> None:
-        self._buffer.append((message or {}).get("content", ""))
+    async def handle_document(self, notice: str, message: dict) -> None:
+        content = (message or {}).get("content", "")
+        await asyncio.to_thread(self._reset_and_open)
+        await asyncio.to_thread(self._write_segment, content)
+        await self._notify("written", {})
 
-    async def handle_page(self, notice: str, message: dict) -> None:
-        self._buffer.append((message or {}).get("content", ""))
+    async def handle_segment(self, notice: str, message: dict) -> None:
+        content = (message or {}).get("content", "")
+        if self._file is None:
+            await asyncio.to_thread(self._reset_and_open)
+        await asyncio.to_thread(self._write_segment, content)
+        await self._notify("written", {})
 
     async def handle_done(self, notice: str, message: dict) -> None:
-        if self._buffer:
-            buf = list(self._buffer)
-            sep = self.page_separator
-            mode = "a" if self.append else "w"
-            enc = self.encoding
-            path = self.output_file
-            await asyncio.to_thread(_write_file, path, buf, sep, mode, enc)
-            self._buffer = []
-        await self._notify("written", {"file": self.output_file})
+        await asyncio.to_thread(self._finalize)
+        await self._notify("done", {"file": self.output_file})
 
+    # -- blocking helpers, always run via asyncio.to_thread --
 
-def _write_file(path: str, contents: List[str], sep: str, mode: str, encoding: str) -> None:
-    with open(path, mode, encoding=encoding) as f:
-        for i, content in enumerate(contents):
-            if i > 0:
-                f.write(sep)
-            f.write(content)
+    def _reset_and_open(self) -> None:
+        self._close_file()
+        self._tmp_path = f"{self.output_file}.tmp"
+        self._file = open(self._tmp_path, "w", encoding=self.encoding)
+        self._first_write = True
+
+    def _write_segment(self, content: str) -> None:
+        if not self._first_write:
+            self._file.write(self.segment_separator)
+        self._file.write(content)
+        self._first_write = False
+
+    def _close_file(self) -> None:
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+
+    def _finalize(self) -> None:
+        wrote_something = self._tmp_path is not None
+        tmp_path = self._tmp_path
+        self._close_file()
+        if wrote_something:
+            os.replace(tmp_path, self.output_file)
+        self._tmp_path = None
+        self._first_write = True

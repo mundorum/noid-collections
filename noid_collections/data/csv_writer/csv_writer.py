@@ -6,7 +6,11 @@ Accepts two input modes, mirroring the output modes of data:csv-source:
   complete   — receives one `table` notice with columns and all rows, then `done`
   row_by_row — receives `schema` once (column names), then N `row` notices, then `done`
 
-In both cases, the file is written on receipt of the `done` notice.
+Rows are written straight to a temporary file (`<output_file>.tmp`) as they
+arrive, so memory usage stays bounded regardless of table size. `schema` and
+`table` both (re)start the file: any previously written content is discarded.
+On `done`, the temporary file is atomically moved to `output_file` (replacing
+any existing file there), so `output_file` never shows partial content.
 
 The `format` property matches data:csv-source's output format:
   "dict" (default) — rows are dicts {"col": value, ...}
@@ -15,17 +19,17 @@ The `format` property matches data:csv-source's output format:
 Properties:
     output_file — destination file path (required)
     encoding    — file encoding (default: "utf-8")
-    append      — append to existing file instead of overwriting (default: False)
     format      — "dict" (default) or "list" (compact)
 
 Received notices:
-    table  — {"columns": [...], "rows": [...]}  complete table (replaces buffer)
-    schema — {"columns": [...]}                 column names, resets row buffer
-    row    — {"row": {...} or [...]}             one row (accumulated until done)
-    done   — {}                                 trigger write + publish written
+    table  — {"columns": [...], "rows": [...]}  complete table; (re)starts the file
+    schema — {"columns": [...]}                 column names; (re)starts the file
+    row    — {"row": {...} or [...]}             one row, written immediately
+    done   — {}                                 finalize the file
 
 Published notices:
-    written — {"file": "<output_file>"}
+    written — {}                          emitted after each physical write (schema/table/row)
+    done    — {"file": "<output_file>"}   emitted once the file is finalized and ready to use
 
 Scene usage:
     {
@@ -35,7 +39,7 @@ Scene usage:
         "output_file": "output/result.csv"
       },
       "subscribe": "pipeline/table~table;pipeline/done~done",
-      "publish":   "written~player/done"
+      "publish":   "done~player/done"
     }
 
   Row-by-row wiring (pipe from data:csv-source):
@@ -43,7 +47,8 @@ Scene usage:
 """
 import asyncio
 import csv
-from typing import List, Union
+import os
+from typing import List, Optional, TextIO, Union
 
 from noid.core.component import Noid, OidComponent
 
@@ -52,8 +57,8 @@ from noid.core.component import Noid, OidComponent
     "id": "data:csv-writer",
     "name": "CSV Writer",
     "description": (
-        "Buffers incoming CSV table or row notices and writes them to a file "
-        "when a done notice is received. "
+        "Streams incoming CSV table or row notices to a temporary file and "
+        "atomically publishes it to output_file when a done notice is received. "
         "Mirrors the two output modes of data:csv-source: "
         "complete table (table + done) or row-by-row (schema + row… + done)."
     ),
@@ -67,10 +72,6 @@ from noid.core.component import Noid, OidComponent
             "default": "utf-8",
             "description": "File encoding.",
         },
-        "append": {
-            "default": False,
-            "description": "Append to an existing file instead of overwriting.",
-        },
         "format": {
             "default": "dict",
             "description": (
@@ -83,85 +84,107 @@ from noid.core.component import Noid, OidComponent
     "receive": {
         "table": {
             "description": (
-                "Complete table payload. Replaces any buffered data. "
-                "Keys: columns (list of str), rows (list of dicts or lists). "
-                "Optional label key is ignored."
+                "Complete table payload. (Re)starts the file, discarding any "
+                "previously written content. Keys: columns (list of str), "
+                "rows (list of dicts or lists). Optional label key is ignored."
             ),
         },
         "schema": {
             "description": (
-                "Column names for row-by-row mode. Resets the row buffer. "
-                "Key: columns (list of str). Optional label key is ignored."
+                "Column names for row-by-row mode. (Re)starts the file, discarding "
+                "any previously written content. Key: columns (list of str). "
+                "Optional label key is ignored."
             ),
         },
         "row": {
             "description": (
-                "One data row, accumulated until done. "
+                "One data row, written immediately. "
                 "Key: row (dict or list depending on format). "
                 "Optional label and index keys are ignored."
             ),
         },
         "done": {
-            "description": "Triggers the file write and emits the written notice.",
+            "description": "Finalizes the file and emits the done notice.",
         },
     },
-    "publish": "written~csv/written",
+    "publish": "written~csv/written;done~csv/done",
     "output_notices": {
         "written": {
-            "description": "Emitted after the file is flushed to disk. Payload key: file (str).",
+            "description": "Emitted after each physical write (schema/table/row).",
+        },
+        "done": {
+            "description": (
+                "Emitted once the file is finalized and ready to use. Payload key: file (str)."
+            ),
         },
     },
 })
 class CsvWriterOid(OidComponent):
-    """Buffers incoming CSV table/row notices and writes them to a file on done."""
+    """Streams incoming CSV table/row notices to a file, finalized atomically on done."""
 
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._columns: List[str] = []
-        self._rows: List[Union[dict, list]] = []
+        self._file: Optional[TextIO] = None
+        self._writer = None
+        self._tmp_path: Optional[str] = None
 
     async def handle_table(self, notice: str, message: dict) -> None:
         msg = message or {}
-        self._columns = list(msg.get("columns", []))
-        self._rows = list(msg.get("rows", []))
+        columns = list(msg.get("columns", []))
+        rows = list(msg.get("rows", []))
+        fmt = self.format
+        await asyncio.to_thread(self._reset_and_open, columns)
+        await asyncio.to_thread(self._write_rows, rows, columns, fmt)
+        await self._notify("written", {})
 
     async def handle_schema(self, notice: str, message: dict) -> None:
-        self._columns = list((message or {}).get("columns", []))
-        self._rows = []
+        columns = list((message or {}).get("columns", []))
+        await asyncio.to_thread(self._reset_and_open, columns)
+        await self._notify("written", {})
 
     async def handle_row(self, notice: str, message: dict) -> None:
         row = (message or {}).get("row")
-        if row is not None:
-            self._rows.append(row)
+        if row is None:
+            return
+        if self._file is None:
+            await asyncio.to_thread(self._reset_and_open, self._columns)
+        await asyncio.to_thread(self._write_rows, [row], self._columns, self.format)
+        await self._notify("written", {})
 
     async def handle_done(self, notice: str, message: dict) -> None:
-        if self._columns or self._rows:
-            columns = list(self._columns)
-            rows = list(self._rows)
-            fmt = self.format
-            mode = "a" if self.append else "w"
-            enc = self.encoding
-            path = self.output_file
-            await asyncio.to_thread(_write_csv, path, columns, rows, fmt, mode, enc)
-            self._columns = []
-            self._rows = []
-        await self._notify("written", {"file": self.output_file})
+        await asyncio.to_thread(self._finalize)
+        await self._notify("done", {"file": self.output_file})
 
+    # -- blocking helpers, always run via asyncio.to_thread --
 
-def _write_csv(
-    path: str,
-    columns: List[str],
-    rows: List[Union[dict, list]],
-    fmt: str,
-    mode: str,
-    encoding: str,
-) -> None:
-    with open(path, mode, newline="", encoding=encoding) as f:
-        writer = csv.writer(f)
+    def _reset_and_open(self, columns: List[str]) -> None:
+        self._close_file()
+        self._columns = columns
+        self._tmp_path = f"{self.output_file}.tmp"
+        self._file = open(self._tmp_path, "w", newline="", encoding=self.encoding)
+        self._writer = csv.writer(self._file)
         if columns:
-            writer.writerow(columns)
+            self._writer.writerow(columns)
+
+    def _write_rows(self, rows: List[Union[dict, list]], columns: List[str], fmt: str) -> None:
         for row in rows:
             if fmt == "list":
-                writer.writerow(row)
+                self._writer.writerow(row)
             else:
-                writer.writerow([row.get(col, "") for col in columns])
+                self._writer.writerow([row.get(col, "") for col in columns])
+
+    def _close_file(self) -> None:
+        if self._file is not None:
+            self._file.close()
+            self._file = None
+            self._writer = None
+
+    def _finalize(self) -> None:
+        wrote_something = self._tmp_path is not None
+        tmp_path = self._tmp_path
+        self._close_file()
+        if wrote_something:
+            os.replace(tmp_path, self.output_file)
+        self._tmp_path = None
+        self._columns = []

@@ -25,8 +25,8 @@ def _tmp_path() -> str:
 
 async def test_complete_table_dict_format() -> None:
     bus = Bus()
-    written = []
-    bus.subscribe("csv/written", lambda t, m: written.append(m))
+    done = []
+    bus.subscribe("csv/done", lambda t, m: done.append(m))
 
     path = _tmp_path()
     try:
@@ -43,10 +43,11 @@ async def test_complete_table_dict_format() -> None:
         })
         await bus.publish("test/done", {})
 
-        assert written == [{"file": path}]
+        assert done == [{"file": path}]
         columns, rows = _read_csv(path)
         assert columns == ["name", "age"]
         assert rows == [{"name": "Alice", "age": "30"}, {"name": "Bob", "age": "25"}]
+        assert not os.path.exists(f"{path}.tmp")
         await comp.stop()
     finally:
         if os.path.exists(path):
@@ -55,9 +56,6 @@ async def test_complete_table_dict_format() -> None:
 
 async def test_complete_table_list_format() -> None:
     bus = Bus()
-    written = []
-    bus.subscribe("csv/written", lambda t, m: written.append(m))
-
     path = _tmp_path()
     try:
         comp = CsvWriterOid(
@@ -84,8 +82,8 @@ async def test_complete_table_list_format() -> None:
 
 async def test_row_by_row_dict_format() -> None:
     bus = Bus()
-    written = []
-    bus.subscribe("csv/written", lambda t, m: written.append(m))
+    done = []
+    bus.subscribe("csv/done", lambda t, m: done.append(m))
 
     path = _tmp_path()
     try:
@@ -101,7 +99,7 @@ async def test_row_by_row_dict_format() -> None:
         await bus.publish("test/row",    {"row": {"x": "3", "y": "4"}})
         await bus.publish("test/done",   {})
 
-        assert written == [{"file": path}]
+        assert done == [{"file": path}]
         columns, rows = _read_csv(path)
         assert columns == ["x", "y"]
         assert rows == [{"x": "1", "y": "2"}, {"x": "3", "y": "4"}]
@@ -163,10 +161,12 @@ async def test_schema_resets_row_buffer() -> None:
             os.unlink(path)
 
 
-async def test_done_without_data_publishes_written() -> None:
+async def test_done_without_data_publishes_done() -> None:
     bus = Bus()
     written = []
+    done = []
     bus.subscribe("csv/written", lambda t, m: written.append(m))
+    bus.subscribe("csv/done", lambda t, m: done.append(m))
 
     path = _tmp_path()
     comp = CsvWriterOid(
@@ -177,7 +177,8 @@ async def test_done_without_data_publishes_written() -> None:
     await comp.start()
     await bus.publish("test/done", {})
 
-    assert written == [{"file": path}]
+    assert written == []
+    assert done == [{"file": path}]
     assert not os.path.exists(path)
     await comp.stop()
 
@@ -234,17 +235,42 @@ async def test_label_and_index_in_row_payload_ignored() -> None:
             os.unlink(path)
 
 
-async def test_append_mode() -> None:
+async def test_written_fires_once_per_schema_and_row() -> None:
+    bus = Bus()
+    written = []
+    bus.subscribe("csv/written", lambda t, m: written.append(m))
+
+    path = _tmp_path()
+    try:
+        comp = CsvWriterOid(
+            bus=bus,
+            subscribe="test/schema~schema;test/row~row;test/done~done",
+            properties={"output_file": path},
+        )
+        await comp.start()
+
+        await bus.publish("test/schema", {"columns": ["x"]})
+        await bus.publish("test/row",    {"row": {"x": "1"}})
+        await bus.publish("test/row",    {"row": {"x": "2"}})
+        assert written == [{}, {}, {}]  # schema + 2 rows, one per physical write
+        await bus.publish("test/done", {})
+        await comp.stop()
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+
+
+async def test_pre_existing_output_file_is_overwritten() -> None:
     bus = Bus()
     path = _tmp_path()
     try:
         with open(path, "w", newline="", encoding="utf-8") as f:
-            csv.writer(f).writerows([["name"], ["Alice"]])
+            csv.writer(f).writerows([["old"], ["stale"]])
 
         comp = CsvWriterOid(
             bus=bus,
             subscribe="test/schema~schema;test/row~row;test/done~done",
-            properties={"output_file": path, "append": True},
+            properties={"output_file": path},
         )
         await comp.start()
 
@@ -254,7 +280,7 @@ async def test_append_mode() -> None:
 
         columns, rows = _read_csv(path)
         assert columns == ["name"]
-        assert rows == [{"name": "Alice"}, {"name": "name"}, {"name": "Bob"}]
+        assert rows == [{"name": "Bob"}]
         await comp.stop()
     finally:
         if os.path.exists(path):
