@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mundorum-noid-collections"
-version = "0.1.12"
+version = "0.1.13"
 description = "Reusable noid components — SLM agents, PDF pipeline, data, and logic building blocks"
 readme = "README.md"
 requires-python = ">=3.10"
