@@ -75,6 +75,32 @@ async def test_first_publishes_schema_and_row() -> None:
     await comp.stop()
 
 
+async def test_first_non_eager_publishes_schema_only() -> None:
+    bus = Bus()
+    schemas, rows = [], []
+    bus.subscribe("csv/schema", lambda t, m: schemas.append(m))
+    bus.subscribe("csv/row",    lambda t, m: rows.append(m))
+
+    comp = CsvSourceOid(
+        bus=bus,
+        subscribe="test/first~first;test/next~next",
+        properties={"content": CSV, "label": "people", "eager_first_row": False},
+    )
+    await comp.start()
+    await bus.publish("test/first", {})
+
+    assert schemas == [{"label": "people", "columns": ["name", "age", "city"]}]
+    assert rows == []
+
+    await bus.publish("test/next", {})
+    assert len(rows) == 1
+    assert rows[0] == {
+        "label": "people", "index": 1,
+        "row": {"name": "Alice", "age": "30", "city": "SP"},
+    }
+    await comp.stop()
+
+
 async def test_next_iterates_rows() -> None:
     bus = Bus()
     rows, exhausted = [], []

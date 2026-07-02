@@ -44,6 +44,7 @@ Scene usage:
 """
 import asyncio
 import os
+from pathlib import Path
 from typing import Optional, TextIO
 
 from noid.core.component import Noid, OidComponent
@@ -128,6 +129,7 @@ class TextWriterOid(OidComponent):
     def _reset_and_open(self) -> None:
         self._close_file()
         self._tmp_path = f"{self.output_file}.tmp"
+        Path(self._tmp_path).parent.mkdir(parents=True, exist_ok=True)
         self._file = open(self._tmp_path, "w", encoding=self.encoding)
         self._first_write = True
 

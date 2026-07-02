@@ -27,9 +27,18 @@ The `format` property controls the row payload shape:
 
 Row indices are 1-based in all modes.
 
+The `eager_first_row` property (default true) controls whether `first` also
+emits row 1, or only schema. Turn it off when piping into a consumer that
+requests every row — including the first — via an explicit `next`, e.g. a
+data:csv-writer wired back as `written~<this-source>/next` for backpressure.
+Leaving it on in that setup double-advances the cursor on the very first
+cycle: the writer's schema-triggered `next` pull races the auto-pushed row 1
+before `first` has finished publishing it, corrupting the pipeline's output.
+
 Notices received:
   load   → publish the full table (label + columns + rows)
-  first  → publish schema + first row; reset internal cursor
+  first  → reset internal cursor; publish schema, then row 1 unless
+           eager_first_row is false (in which case row 1 needs a `next`)
   next   → publish next row, or `exhausted` if no more rows
 
 Notices published (format="dict"):
@@ -146,10 +155,30 @@ def _parse_csv(content: str, delimiter: str = ",") -> tuple[List[str], List[Dict
                 "saves memory for large tables by omitting repeated field names."
             ),
         },
+        "eager_first_row": {
+            "default": True,
+            "description": (
+                "If true (default), `first` publishes schema and row 1 together in "
+                "one call — convenient when a single caller consumes both. Set to "
+                "false when piping into a consumer that pulls every row (including "
+                "the first) via an explicit `next`, e.g. a data:csv-writer wired back "
+                "as `written~<this-source>/next`. With eager_first_row true, that "
+                "wiring double-advances on the first cycle: the writer's "
+                "schema-triggered `next` pull races the auto-pushed row 1, since "
+                "`first` doesn't return until the whole downstream reaction to "
+                "`schema` (including that pull) has finished."
+            ),
+        },
     },
     "receive": {
         "load":  {"description": "Publish the entire CSV as a structured table."},
-        "first": {"description": "Reset the row cursor; publish schema then the first row."},
+        "first": {
+            "description": (
+                "Reset the row cursor and publish schema. Also publishes row 1 in "
+                "the same call unless eager_first_row is false, in which case row 1 "
+                "must be requested via `next` like every other row."
+            ),
+        },
         "next":  {
             "description": "Advance the cursor; publish the next row, or exhausted if none remain.",
         },
@@ -230,8 +259,12 @@ class CsvSourceOid(OidComponent):
         })
 
     async def handle_first(self, notice: str, message: dict) -> None:
-        """Reset cursor, publish schema, then publish the first row."""
+        """Reset cursor, publish schema, then publish the first row unless eager_first_row is false."""
         self._ensure_parsed()
+        if not self.eager_first_row:
+            self._cursor = -1
+            await self._notify("schema", {**self._label_payload(), "columns": self._columns})
+            return
         self._cursor = 0
         await self._notify("schema", {**self._label_payload(), "columns": self._columns})
         rows = self._effective_rows()

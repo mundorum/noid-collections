@@ -34,6 +34,7 @@ Scene usage:
 import asyncio
 import os
 import tempfile
+from pathlib import Path
 
 from noid.core.component import Noid, OidComponent
 
@@ -102,7 +103,9 @@ class PdfOcrOid(OidComponent):
         try:
             import ocrmypdf
             output_file = self.output_file
-            if not output_file:
+            if output_file:
+                Path(output_file).parent.mkdir(parents=True, exist_ok=True)
+            else:
                 fd, output_file = tempfile.mkstemp(suffix="_ocr.pdf")
                 os.close(fd)
             await self._notify("status", f"OCR starting — {input_file}")

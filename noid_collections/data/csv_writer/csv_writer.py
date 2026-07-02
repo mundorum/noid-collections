@@ -55,6 +55,7 @@ Scene usage:
 import asyncio
 import csv
 import os
+from pathlib import Path
 from typing import List, Optional, TextIO, Union
 
 from noid.core.component import Noid, OidComponent
@@ -176,6 +177,7 @@ class CsvWriterOid(OidComponent):
         self._close_file()
         self._columns = columns
         self._tmp_path = f"{self.output_file}.tmp"
+        Path(self._tmp_path).parent.mkdir(parents=True, exist_ok=True)
         self._file = open(self._tmp_path, "w", newline="", encoding=self.encoding)
         self._writer = csv.writer(self._file, delimiter=self.delimiter)
         if columns:
