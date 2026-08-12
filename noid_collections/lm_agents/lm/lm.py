@@ -2,8 +2,10 @@
 lm:lm-agent — LM component backed by Ollama.
 
 The Ollama model can be set at instantiation time via the `model` property.
-The `prompt_template` property accepts {input}, {question}, and dotted-path
-placeholders like {row.name} that resolve into nested message fields.
+The `prompt_template` property accepts {{input}}, {{question}}, and dotted-path
+placeholders like {{row.name}} that resolve into nested message fields. Double
+braces avoid colliding with literal JSON in the template (e.g. when instructing
+the model to reply in JSON).
 
 Requires: ollama>=0.3  (pip install ollama)
 """
@@ -27,11 +29,12 @@ from noid.core.component import Noid, OidComponent
             "description": "Ollama server URL.",
         },
         "prompt_template": {
-            "default": "{input}",
+            "default": "{{input}}",
             "kind": "text",
             "description": (
-                "Prompt template. Supports {input}, {question}, flat message keys "
-                "as {key}, and dot-separated paths into nested fields as {row.name}."
+                "Prompt template. Supports {{input}}, {{question}}, flat message keys "
+                "as {{key}}, and dot-separated paths into nested fields as {{row.name}}. "
+                "Double braces avoid colliding with literal JSON in the template."
             ),
         },
         "temperature": {
@@ -153,15 +156,15 @@ class LMAgentOid(OidComponent):
 
     @staticmethod
     def _render_template(template: str, input_val: str, question: str, message: dict) -> str:
-        result = re.sub(re.escape("{input}"), input_val, template, flags=re.IGNORECASE)
-        result = re.sub(re.escape("{question}"), question, result, flags=re.IGNORECASE)
+        result = re.sub(re.escape("{{input}}"), input_val, template, flags=re.IGNORECASE)
+        result = re.sub(re.escape("{{question}}"), question, result, flags=re.IGNORECASE)
         if isinstance(message, dict):
             def _replace(match: re.Match) -> str:
                 key = match.group(1)
                 if key in message:
                     return str(message[key])
                 return _resolve_path(message, key)
-            result = re.sub(r"\{([^}]+)\}", _replace, result)
+            result = re.sub(r"\{\{([^}]+)\}\}", _replace, result)
         return result
 
 

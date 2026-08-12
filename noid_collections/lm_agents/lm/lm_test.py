@@ -49,7 +49,7 @@ async def test_lm_agent_model_configurable() -> None:
 
 async def test_lm_render_template() -> None:
     rendered = LMAgentOid._render_template(
-        "Q: {question} Context: {input}", "some text", "What year?", {}
+        "Q: {{question}} Context: {{input}}", "some text", "What year?", {}
     )
     assert rendered == "Q: What year? Context: some text"
 
@@ -57,7 +57,7 @@ async def test_lm_render_template() -> None:
 async def test_lm_render_template_dotted_path() -> None:
     message = {"index": 1, "row": {"name": "Rot Donnadd", "age": "43"}}
     rendered = LMAgentOid._render_template(
-        "Patient: {row.name}, age {row.age}", "", "", message
+        "Patient: {{row.name}}, age {{row.age}}", "", "", message
     )
     assert rendered == "Patient: Rot Donnadd, age 43"
 
@@ -65,14 +65,14 @@ async def test_lm_render_template_dotted_path() -> None:
 async def test_lm_render_template_flat_and_dotted() -> None:
     message = {"index": 2, "row": {"name": "Jane"}}
     rendered = LMAgentOid._render_template(
-        "Record {index}: {row.name}", "", "", message
+        "Record {{index}}: {{row.name}}", "", "", message
     )
     assert rendered == "Record 2: Jane"
 
 
 async def test_lm_render_template_missing_path_is_empty() -> None:
     message = {"row": {"name": "Bob"}}
-    rendered = LMAgentOid._render_template("{row.missing}", "", "", message)
+    rendered = LMAgentOid._render_template("{{row.missing}}", "", "", message)
     assert rendered == ""
 
 
@@ -168,7 +168,7 @@ async def test_lm_row_adds_reply_below_row() -> None:
         publish="row~lm/row",
         properties={
             "csv_field": "comment",
-            "prompt_template": "Patient: {row.name}, age {row.age}",
+            "prompt_template": "Patient: {{row.name}}, age {{row.age}}",
         },
     )
     await comp.start()

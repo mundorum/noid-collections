@@ -12,9 +12,10 @@ properties:
     default: http://localhost:11434
     required: false
   prompt_template:
-    description: Prompt template. Supports {input}, {question}, flat message keys
-      as {key}, and dot-separated paths into nested fields as {row.name}.
-    default: '{input}'
+    description: Prompt template. Supports {{input}}, {{question}}, flat message keys
+      as {{key}}, and dot-separated paths into nested fields as {{row.name}}. Double
+      braces avoid colliding with literal JSON in the template.
+    default: '{{input}}'
     required: false
     kind: text
   temperature:

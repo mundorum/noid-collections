@@ -2,7 +2,7 @@
 
 # Install build tools
 ~~~bash
-pip install build twine
+uv pip install build twine
 ~~~
 
 # Build the package

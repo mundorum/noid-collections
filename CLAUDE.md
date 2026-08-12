@@ -141,7 +141,7 @@ Scene files live in `scenes/`. Use this format:
     {
       "type":       "slm:llm-agent",
       "id":         "agent1",
-      "properties": {"model": "llama3.2", "prompt_template": "Answer: {input}"},
+      "properties": {"model": "llama3.2", "prompt_template": "Answer: {{input}}"},
       "subscribe":  "pipeline/start~input",
       "publish":    "output~pipeline/llm-out"
     }
