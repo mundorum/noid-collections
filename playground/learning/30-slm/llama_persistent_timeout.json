@@ -1,0 +1,44 @@
+{
+  "title": "Persistent LM Agent - Timeout and Fallback Demo",
+  "imports": [
+    "noid:data.csv_source",
+    "noid:lm_agents.lm",
+    "noid:basic.console_display"
+  ],
+  "components": [
+    {
+      "type": "data:csv-source",
+      "id":   "csv",
+      "properties": {
+        "label":   "patients",
+        "content": "name,age,symptoms\nAlice,30,fever cough"
+      },
+      "subscribe": "player/start~first;pipeline/next~next",
+      "publish":   "row~pipeline/row;exhausted~player/done"
+    },
+    {
+      "type": "lm:lm-agent",
+      "id":   "lm",
+      "properties": {
+        "model": "llama3.2:3b",
+        "prompt_template": "Analyze: {{row.symptoms}}",
+        "csv_field": "diagnosis",
+        "retries": 3,
+        "initial_timeout": 0.001,
+        "timeout_multiplier": 1.5,
+        "backoff_factor": 0.1,
+        "error_mode": "fallback_value",
+        "error_fallback_value": "DIAGNOSIS_TIMEOUT_RECOVERY"
+      },
+      "subscribe": "pipeline/row~row",
+      "publish":   "row~pipeline/lm-out"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "display",
+      "properties": {"label": "Persistent Agent Output"},
+      "subscribe": "pipeline/lm-out~show",
+      "publish":   "output~pipeline/next"
+    }
+  ]
+}

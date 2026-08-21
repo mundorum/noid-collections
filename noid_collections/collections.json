@@ -110,5 +110,21 @@
       "noid_collections.data.csv_writer.csv_writer"
     ],
     "description": "Buffers incoming CSV table or row notices and writes them to a file when a done notice is received. Mirrors the two output modes of data:csv-source: complete table (table + done) or row-by-row (schema + row… + done)."
+  },
+  {
+    "name": "Data — Progress Tracker",
+    "pip_extra": null,
+    "modules": [
+      "noid_collections.data.progress_tracker.progress_tracker"
+    ],
+    "description": "Filters out already processed dataset rows based on a persistent state file."
+  },
+  {
+    "name": "LM Agents — Persistent LM Agent",
+    "pip_extra": null,
+    "modules": [
+      "noid_collections.lm_agents.persistent_agent.persistent_agent"
+    ],
+    "description": "Calls an Ollama LLM with a rendered prompt template, featuring error retries and timeout backoffs."
   }
 ]

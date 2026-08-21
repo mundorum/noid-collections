@@ -1,7 +1,7 @@
 id: lm:lm-agent
-name: LM Agent
-description: Calls an Ollama LLM with a rendered prompt template and publishes the
-  reply.
+name: Persistent LM Agent
+description: Calls an Ollama LLM with a rendered prompt template, featuring error
+  retries and timeout backoffs.
 properties:
   model:
     description: Ollama model name to use for inference.
@@ -29,6 +29,31 @@ properties:
       of {content, model}. Must not be set for plain, non-CSV usage — it has no default
       value.'
     required: true
+  retries:
+    description: Maximum number of retry attempts for failed LLM calls.
+    default: 4
+    required: false
+  initial_timeout:
+    description: Initial timeout in seconds for the first attempt.
+    default: 30.0
+    required: false
+  timeout_multiplier:
+    description: Multiplier applied to the timeout for each successive retry attempt.
+    default: 1.3
+    required: false
+  backoff_factor:
+    description: Multiplier applied to determine sleep duration between retries.
+    default: 1.5
+    required: false
+  error_mode:
+    description: 'Behavior when all retries fail: ''fallback_value'' or ''propagate''.'
+    default: fallback_value
+    required: false
+  error_fallback_value:
+    description: Value written to the output field when error_mode is 'fallback_value'
+      and all retries fail.
+    default: LLM_ERROR
+    required: false
 input_notices:
   input:
     description: 'Triggers LLM inference on a single item. Payload keys: content (str),

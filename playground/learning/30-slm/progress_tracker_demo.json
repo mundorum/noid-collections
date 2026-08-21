@@ -1,0 +1,61 @@
+{
+  "title": "Progress Tracker Demo - Cooperative Resuming",
+  "imports": [
+    "noid:data.csv_source",
+    "noid:data.progress_tracker",
+    "noid:data.csv_writer",
+    "noid:basic.console_display"
+  ],
+  "components": [
+    {
+      "type": "data:csv-source",
+      "id":   "csv",
+      "properties": {
+        "label":   "patients.csv",
+        "content": "name,age,symptoms\nAlice,30,fever cough\nBob,25,headache fatigue\nCarol,45,chest pain shortness of breath"
+      },
+      "subscribe": "player/start~first;pipeline/next~next",
+      "publish":   "schema~pipeline/schema;row~pipeline/row;exhausted~pipeline/exhausted"
+    },
+    {
+      "type": "data:progress-tracker",
+      "id":   "tracker",
+      "properties": {
+        "state_file": "patients_progress.csv",
+        "identifier_path": "row.name"
+      },
+      "subscribe": "pipeline/schema~schema;pipeline/row~row;pipeline/checkpoint~checkpoint",
+      "publish":   "schema~pipeline/tracker-schema;forward~pipeline/tracker-forward;skipped~pipeline/tracker-skipped;checkpoint_recorded~pipeline/checkpoint-recorded"
+    },
+    {
+      "type": "data:csv-writer",
+      "id":   "writer",
+      "properties": {
+        "output_file": "patients_progress.csv"
+      },
+      "subscribe": "pipeline/tracker-schema~schema;pipeline/tracker-forward~row;pipeline/exhausted~done",
+      "publish":   "done~player/done"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "display_forwarded",
+      "properties": {"label": "Forwarded (New)"},
+      "subscribe": "pipeline/tracker-forward~show",
+      "publish":   "output~pipeline/checkpoint"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "display_skipped",
+      "properties": {"label": "Skipped (Already Processed)"},
+      "subscribe": "pipeline/tracker-skipped~show",
+      "publish":   "output~pipeline/next"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "display_checkpoint",
+      "properties": {"label": "Checkpoint Saved"},
+      "subscribe": "pipeline/checkpoint-recorded~show",
+      "publish":   "output~pipeline/next"
+    }
+  ]
+}

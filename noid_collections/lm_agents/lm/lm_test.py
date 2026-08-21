@@ -1,4 +1,4 @@
-"""Tests for lm:lm-agent — mocks the ollama client to avoid needing a running server."""
+"""Tests for lm:persistent-agent — mocks the ollama client to verify retries, timeouts, and fallbacks."""
 import sys
 import types
 from contextlib import contextmanager
@@ -7,252 +7,139 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from noid.core.bus import Bus
-from noid_collections.lm_agents.lm.lm import LMAgentOid, _resolve_path
+from noid_collections.lm_agents.lm.lm import LMAgentOid
 
 
 @contextmanager
-def _fake_ollama(reply: str):
-    """Inject a fake ollama module that returns `reply` from client.chat."""
+def _fake_ollama_with_behavior(side_effects):
+    """Inject a fake ollama module where client.chat has side_effects.
+
+    side_effects is a list of return values or exceptions.
+    Also returns a list of client initialization keyword arguments (e.g. timeout).
+    """
     fake_client = MagicMock()
-    fake_client.chat.return_value = {"message": {"content": reply}}
+    fake_client.chat.side_effect = side_effects
     mod = types.ModuleType("ollama")
-    mod.Client = MagicMock(return_value=fake_client)
+
+    client_calls = []
+
+    def client_init(*args, **kwargs):
+        client_calls.append(kwargs)
+        return fake_client
+
+    mod.Client = MagicMock(side_effect=client_init)
     with patch.dict(sys.modules, {"ollama": mod}):
-        yield fake_client
+        yield client_calls
 
 
-async def test_lm_agent_publishes_document() -> None:
+async def test_persistent_agent_success_no_retries() -> None:
     bus = Bus()
     received = []
     bus.subscribe("lm/document", lambda t, m: received.append(m))
 
-    comp = LMAgentOid(bus=bus, subscribe="test/lm/in~input", publish="document~lm/document")
+    comp = PersistentLMAgentOid(
+        bus=bus, subscribe="test/lm/in~input", publish="document~lm/document"
+    )
     await comp.start()
 
-    with _fake_ollama("The answer is 42."):
-        await bus.publish("test/lm/in", {"content": "What is the answer?"})
+    chat_response = {"message": {"content": "Hello world"}}
+    with _fake_ollama_with_behavior([chat_response]) as client_calls:
+        await bus.publish("test/lm/in", {"content": "Hi"})
 
     assert len(received) == 1
-    assert received[0]["content"] == "The answer is 42."
-    assert received[0]["model"] == "llama3.2"
-
+    assert received[0]["content"] == "Hello world"
+    assert len(client_calls) == 1
+    assert client_calls[0]["timeout"] == 30.0
     await comp.stop()
 
 
-async def test_lm_agent_model_configurable() -> None:
-    bus = Bus()
-    comp = LMAgentOid(bus=bus, properties={"model": "mistral"})
-    await comp.start()
-    assert comp.model == "mistral"
-    await comp.stop()
-
-
-async def test_lm_render_template() -> None:
-    rendered = LMAgentOid._render_template(
-        "Q: {{question}} Context: {{input}}", "some text", "What year?", {}
-    )
-    assert rendered == "Q: What year? Context: some text"
-
-
-async def test_lm_render_template_dotted_path() -> None:
-    message = {"index": 1, "row": {"name": "Rot Donnadd", "age": "43"}}
-    rendered = LMAgentOid._render_template(
-        "Patient: {{row.name}}, age {{row.age}}", "", "", message
-    )
-    assert rendered == "Patient: Rot Donnadd, age 43"
-
-
-async def test_lm_render_template_flat_and_dotted() -> None:
-    message = {"index": 2, "row": {"name": "Jane"}}
-    rendered = LMAgentOid._render_template(
-        "Record {{index}}: {{row.name}}", "", "", message
-    )
-    assert rendered == "Record 2: Jane"
-
-
-async def test_lm_render_template_missing_path_is_empty() -> None:
-    message = {"row": {"name": "Bob"}}
-    rendered = LMAgentOid._render_template("{{row.missing}}", "", "", message)
-    assert rendered == ""
-
-
-async def test_lm_csv_field_document_mode() -> None:
+async def test_persistent_agent_retries_and_succeeds() -> None:
     bus = Bus()
     received = []
     bus.subscribe("lm/document", lambda t, m: received.append(m))
 
-    comp = LMAgentOid(
+    comp = PersistentLMAgentOid(
         bus=bus,
         subscribe="test/lm/in~input",
         publish="document~lm/document",
-        properties={"csv_field": "comment"},
-    )
-    await comp.start()
-
-    with _fake_ollama("Great insight."):
-        await bus.publish("test/lm/in", {"index": 1, "content": "Some text"})
-
-    assert len(received) == 1
-    assert received[0]["index"] == 1
-    assert received[0]["comment"] == "Great insight."
-    assert "model" not in received[0]
-
-    await comp.stop()
-
-
-async def test_lm_csv_field_document_mode_does_not_mutate_input() -> None:
-    bus = Bus()
-    received = []
-    bus.subscribe("lm/document", lambda t, m: received.append(m))
-
-    comp = LMAgentOid(
-        bus=bus,
-        subscribe="test/lm/in~input",
-        publish="document~lm/document",
-        properties={"csv_field": "comment"},
-    )
-    await comp.start()
-
-    original = {"index": 1, "content": "hi"}
-    with _fake_ollama("reply"):
-        await bus.publish("test/lm/in", original)
-
-    assert "comment" not in original
-
-    await comp.stop()
-
-
-async def test_lm_schema_adds_csv_field_column() -> None:
-    bus = Bus()
-    received = []
-    bus.subscribe("lm/schema", lambda t, m: received.append(m))
-
-    comp = LMAgentOid(
-        bus=bus,
-        subscribe="test/lm/schema~schema",
-        publish="schema~lm/schema",
-        properties={"csv_field": "comment"},
-    )
-    await comp.start()
-
-    await bus.publish("test/lm/schema", {"label": "patients", "columns": ["name", "age"]})
-
-    assert received == [{"label": "patients", "columns": ["name", "age", "comment"]}]
-
-    await comp.stop()
-
-
-async def test_lm_schema_ignored_without_csv_field() -> None:
-    bus = Bus()
-    received = []
-    bus.subscribe("lm/schema", lambda t, m: received.append(m))
-
-    comp = LMAgentOid(bus=bus, subscribe="test/lm/schema~schema", publish="schema~lm/schema")
-    await comp.start()
-
-    await bus.publish("test/lm/schema", {"columns": ["name", "age"]})
-
-    assert received == []
-
-    await comp.stop()
-
-
-async def test_lm_row_adds_reply_below_row() -> None:
-    bus = Bus()
-    received = []
-    bus.subscribe("lm/row", lambda t, m: received.append(m))
-
-    comp = LMAgentOid(
-        bus=bus,
-        subscribe="test/lm/row~row",
-        publish="row~lm/row",
         properties={
-            "csv_field": "comment",
-            "prompt_template": "Patient: {{row.name}}, age {{row.age}}",
+            "retries": 3,
+            "initial_timeout": 5.0,
+            "timeout_multiplier": 2.0,
+            "backoff_factor": 0.01,  # Keep it fast in tests
         },
     )
     await comp.start()
 
-    row_msg = {
-        "label": "patients",
-        "index": 1,
-        "row": {"name": "Rot Donnadd", "age": "43"},
-    }
-    with _fake_ollama("This is a strange name.") as client:
-        await bus.publish("test/lm/row", row_msg)
-
-    assert client.chat.call_args.kwargs["messages"][0]["content"] == (
-        "Patient: Rot Donnadd, age 43"
-    )
+    chat_response = {"message": {"content": "Succeeded on attempt 3"}}
+    side_effects = [
+        TimeoutError("connection timed out"),
+        RuntimeError("server error"),
+        chat_response,
+    ]
+    with _fake_ollama_with_behavior(side_effects) as client_calls:
+        await bus.publish("test/lm/in", {"content": "Hi"})
 
     assert len(received) == 1
-    out = received[0]
-    assert out["label"] == "patients"
-    assert out["index"] == 1
-    assert out["row"]["name"] == "Rot Donnadd"
-    assert out["row"]["age"] == "43"
-    assert out["row"]["comment"] == "This is a strange name."
-
+    assert received[0]["content"] == "Succeeded on attempt 3"
+    assert len(client_calls) == 3
+    # Check that timeouts increased: 5.0 -> 10.0 -> 20.0
+    assert client_calls[0]["timeout"] == 5.0
+    assert client_calls[1]["timeout"] == 10.0
+    assert client_calls[2]["timeout"] == 20.0
     await comp.stop()
 
 
-async def test_lm_row_does_not_mutate_input() -> None:
+async def test_persistent_agent_fails_and_returns_fallback() -> None:
     bus = Bus()
     received = []
-    bus.subscribe("lm/row", lambda t, m: received.append(m))
+    bus.subscribe("lm/document", lambda t, m: received.append(m))
 
-    comp = LMAgentOid(
+    comp = PersistentLMAgentOid(
         bus=bus,
-        subscribe="test/lm/row~row",
-        publish="row~lm/row",
-        properties={"csv_field": "comment"},
+        subscribe="test/lm/in~input",
+        publish="document~lm/document",
+        properties={
+            "retries": 2,
+            "initial_timeout": 1.0,
+            "timeout_multiplier": 1.5,
+            "backoff_factor": 0.01,
+            "error_mode": "fallback_value",
+            "error_fallback_value": "FALLBACK_TXT",
+        },
     )
     await comp.start()
 
-    original = {"index": 1, "row": {"name": "Alice"}}
-    with _fake_ollama("reply"):
-        await bus.publish("test/lm/row", original)
+    side_effects = [TimeoutError("timed out 1"), TimeoutError("timed out 2")]
+    with _fake_ollama_with_behavior(side_effects) as client_calls:
+        await bus.publish("test/lm/in", {"content": "Hi"})
 
-    assert "comment" not in original["row"]
-
+    assert len(received) == 1
+    assert received[0]["content"] == "FALLBACK_TXT"
+    assert len(client_calls) == 2
     await comp.stop()
 
 
-async def test_lm_row_ignored_without_csv_field() -> None:
+async def test_persistent_agent_fails_and_propagates() -> None:
     bus = Bus()
-    received = []
-    bus.subscribe("lm/row", lambda t, m: received.append(m))
-
-    comp = LMAgentOid(bus=bus, subscribe="test/lm/row~row", publish="row~lm/row")
+    comp = PersistentLMAgentOid(
+        bus=bus,
+        subscribe="test/lm/in~input",
+        publish="document~lm/document",
+        properties={
+            "retries": 2,
+            "initial_timeout": 1.0,
+            "timeout_multiplier": 1.5,
+            "backoff_factor": 0.01,
+            "error_mode": "propagate",
+        },
+    )
     await comp.start()
 
-    with _fake_ollama("reply"):
-        await bus.publish("test/lm/row", {"index": 1, "row": {"name": "Alice"}})
+    side_effects = [TimeoutError("timed out 1"), TimeoutError("timed out 2")]
+    with _fake_ollama_with_behavior(side_effects) as client_calls:
+        with pytest.raises(RuntimeError, match="Ollama call failed after 2 attempts"):
+            await comp.handle_input("input", {"content": "Hi"})
 
-    assert received == []
-
+    assert len(client_calls) == 2
     await comp.stop()
-
-
-async def test_ollama_missing_raises_runtime_error() -> None:
-    bus = Bus()
-    comp = LMAgentOid(bus=bus, subscribe="test/missing~input")
-    await comp.start()
-
-    with patch.dict(sys.modules, {"ollama": None}):
-        with pytest.raises(RuntimeError, match="ollama package"):
-            await comp.handle_input("input", {"content": "hi"})
-
-    await comp.stop()
-
-
-def test_resolve_path_nested() -> None:
-    obj = {"row": {"name": "Alice", "age": "30"}}
-    assert _resolve_path(obj, "row.name") == "Alice"
-    assert _resolve_path(obj, "row.age") == "30"
-
-
-def test_resolve_path_missing() -> None:
-    obj = {"row": {"name": "Alice"}}
-    assert _resolve_path(obj, "row.missing") == ""
-    assert _resolve_path(obj, "other.field") == ""

@@ -1,24 +1,22 @@
 """
-lm:lm-agent — LM component backed by Ollama.
+lm:persistent-agent — Robust LLM component with retry logic and timeout backoffs.
 
-The Ollama model can be set at instantiation time via the `model` property.
-The `prompt_template` property accepts {{input}}, {{question}}, and dotted-path
-placeholders like {{row.name}} that resolve into nested message fields. Double
-braces avoid colliding with literal JSON in the template (e.g. when instructing
-the model to reply in JSON).
-
-Requires: ollama>=0.3  (pip install ollama)
+Exposes retries, initial_timeout, timeout_multiplier, and backoff_factor. Runs LLM call in a thread executor to avoid blocking the event loop.
 """
 import copy
 import re
+import asyncio
+import logging
 
 from noid.core.component import Noid, OidComponent
+
+logger = logging.getLogger(__name__)
 
 
 @Noid.component({
     "id": "lm:lm-agent",
-    "name": "LM Agent",
-    "description": "Calls an Ollama LLM with a rendered prompt template and publishes the reply.",
+    "name": "Persistent LM Agent",
+    "description": "Calls an Ollama LLM with a rendered prompt template, featuring error retries and timeout backoffs.",
     "properties": {
         "model": {
             "default": "llama3.2",
@@ -49,6 +47,30 @@ from noid.core.component import Noid, OidComponent
                 "input dict instead of {content, model}. Must not be set for plain, "
                 "non-CSV usage — it has no default value."
             ),
+        },
+        "retries": {
+            "default": 4,
+            "description": "Maximum number of retry attempts for failed LLM calls.",
+        },
+        "initial_timeout": {
+            "default": 30.0,
+            "description": "Initial timeout in seconds for the first attempt.",
+        },
+        "timeout_multiplier": {
+            "default": 1.3,
+            "description": "Multiplier applied to the timeout for each successive retry attempt.",
+        },
+        "backoff_factor": {
+            "default": 1.5,
+            "description": "Multiplier applied to determine sleep duration between retries.",
+        },
+        "error_mode": {
+            "default": "fallback_value",
+            "description": "Behavior when all retries fail: 'fallback_value' or 'propagate'.",
+        },
+        "error_fallback_value": {
+            "default": "LLM_ERROR",
+            "description": "Value written to the output field when error_mode is 'fallback_value' and all retries fail.",
         },
     },
     "receive": {
@@ -93,11 +115,11 @@ from noid.core.component import Noid, OidComponent
         },
     },
 })
-class LMAgentOid(OidComponent):
-    """Calls an Ollama model with a rendered prompt and publishes the reply."""
+class PersistentLMAgentOid(OidComponent):
+    """Calls an Ollama model with a rendered prompt, featuring retries and backoffs."""
 
     async def handle_input(self, notice: str, message: dict) -> None:
-        reply = await self._infer(message)
+        reply = await self._infer_with_retry(message)
 
         csv_field = getattr(self, "csv_field", "")
         if csv_field and isinstance(message, dict):
@@ -123,7 +145,7 @@ class LMAgentOid(OidComponent):
         if not csv_field:
             return
 
-        reply = await self._infer(message)
+        reply = await self._infer_with_retry(message)
 
         envelope = dict(message) if isinstance(message, dict) else {}
         row = copy.deepcopy(envelope.get("row", {}))
@@ -133,7 +155,7 @@ class LMAgentOid(OidComponent):
 
     # ------------------------------------------------------------------
 
-    async def _infer(self, message) -> str:
+    async def _infer_with_retry(self, message) -> str:
         try:
             import ollama
         except ImportError as exc:
@@ -146,13 +168,43 @@ class LMAgentOid(OidComponent):
 
         prompt = self._render_template(self.prompt_template, content, question, message)
 
-        client = ollama.Client(host=self.host)
-        response = client.chat(
-            model=self.model,
-            messages=[{"role": "user", "content": prompt}],
-            options={"temperature": self.temperature},
-        )
-        return response["message"]["content"]
+        retries = int(getattr(self, "retries", 4))
+        initial_timeout = float(getattr(self, "initial_timeout", 30.0))
+        timeout_multiplier = float(getattr(self, "timeout_multiplier", 1.3))
+        backoff_factor = float(getattr(self, "backoff_factor", 1.5))
+        error_mode = getattr(self, "error_mode", "fallback_value")
+        fallback_val = getattr(self, "error_fallback_value", "LLM_ERROR")
+
+        last_error = None
+        for attempt in range(retries):
+            timeout = initial_timeout * (timeout_multiplier ** attempt)
+            if attempt > 0:
+                sleep_time = backoff_factor * (2 ** (attempt - 1))
+                await asyncio.sleep(sleep_time)
+
+            try:
+                client = ollama.Client(host=self.host, timeout=timeout)
+                # Since client.chat blocks, execute it in a thread executor
+                response = await asyncio.to_thread(
+                    client.chat,
+                    model=self.model,
+                    messages=[{"role": "user", "content": prompt}],
+                    options={"temperature": self.temperature},
+                )
+                return response["message"]["content"]
+            except Exception as exc:
+                last_error = exc
+                logger.warning(
+                    "Attempt %d/%d failed calling Ollama model %r on %r (timeout=%.1fs): %s",
+                    attempt + 1, retries, self.model, self.host, timeout, exc
+                )
+
+        if error_mode == "propagate":
+            raise RuntimeError(
+                f"Ollama call failed after {retries} attempts. Last error: {last_error}"
+            ) from last_error
+
+        return fallback_val
 
     @staticmethod
     def _render_template(template: str, input_val: str, question: str, message: dict) -> str:

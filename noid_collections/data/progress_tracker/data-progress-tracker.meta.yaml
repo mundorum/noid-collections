@@ -1,0 +1,33 @@
+id: data:progress-tracker
+name: Progress Tracker
+description: Filters out already processed dataset rows based on a persistent state
+  file.
+properties:
+  state_file:
+    description: Path to the local CSV file storing completed row data.
+    default: progress.csv
+    required: false
+  identifier_path:
+    description: Dotted path in the incoming row to resolve the unique identifier
+      (e.g. 'index' or 'row.name').
+    default: index
+    required: false
+input_notices:
+  schema:
+    description: Optional schema notice to dynamically set the progress CSV file name
+      based on the schema label.
+  row:
+    description: Incoming row to check. If already processed, it is skipped. Otherwise,
+      it is forwarded.
+  checkpoint:
+    description: Signals that a row was successfully completed. Its row data is appended
+      to the CSV.
+output_notices:
+  schema:
+    description: Publishes the schema notice downstream.
+  forward:
+    description: Forwards the incoming row if it has not been processed yet.
+  skipped:
+    description: Publishes the skipped row notice if it has already been processed.
+  checkpoint_recorded:
+    description: Publishes the recorded checkpoint payload after persisting it.
