@@ -31,7 +31,8 @@
       "type": "data:csv-writer",
       "id":   "writer",
       "properties": {
-        "output_file": "patients_output.csv"
+        "output_file": "patients_output.csv",
+        "append": true
       },
       "subscribe": "pipeline/tracker-schema~schema;pipeline/tracker-forward~row;pipeline/exhausted~done",
       "publish":   "row_written~pipeline/checkpoint;done~player/done"

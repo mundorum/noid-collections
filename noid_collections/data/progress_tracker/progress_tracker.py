@@ -36,13 +36,15 @@ logger = logging.getLogger(__name__)
         "schema": {"description": "Schema notice to forward; it never changes the checkpoint journal path."},
         "row": {"description": "Incoming row to check. Completed rows are skipped; other rows are forwarded."},
         "checkpoint": {"description": "Success acknowledgement containing the same identifier as the forwarded row."},
+        "status": {"description": "Requests the tracker journal's resolved path and currently loaded checkpoint count."},
     },
-    "publish": "forward~data/row;skipped~data/skipped;schema~data/schema;checkpoint_recorded~data/checkpoint;error~data/error",
+    "publish": "forward~data/row;skipped~data/skipped;schema~data/schema;checkpoint_recorded~data/checkpoint;state~data/state;error~data/error",
     "output_notices": {
         "schema": {"description": "Publishes the schema notice downstream unchanged."},
         "forward": {"description": "Forwards a row whose identifier is not checkpointed."},
         "skipped": {"description": "Publishes a row whose identifier is already checkpointed."},
         "checkpoint_recorded": {"description": "Emitted only after the identifier is durably appended."},
+        "state": {"description": "Current tracker state. Payload keys: state_file, exists, completed_count, format."},
         "error": {"description": "A checkpoint could not be persisted. Payload keys: error, key."},
     },
 })
@@ -79,6 +81,15 @@ class ProgressTrackerOid(OidComponent):
 
     async def handle_schema(self, notice: str, message: dict) -> None:
         await self._notify("schema", message)
+
+    async def handle_status(self, notice: str, message: dict) -> None:
+        """Publish the effective journal state without modifying it."""
+        await self._notify("state", {
+            "state_file": self._state_file_abs,
+            "exists": Path(self._state_file_abs).is_file(),
+            "completed_count": len(self._completed_keys),
+            "format": "keys-v1",
+        })
 
     async def handle_row(self, notice: str, message: dict) -> None:
         key = self._resolve_key(message)

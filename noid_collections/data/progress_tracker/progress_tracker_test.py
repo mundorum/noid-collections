@@ -66,6 +66,38 @@ async def test_schema_does_not_change_configured_journal_path(tmp_path) -> None:
     await comp.stop()
 
 
+async def test_status_reports_resolved_journal_and_loaded_checkpoint_count(tmp_path) -> None:
+    state_file = tmp_path / "progress.keys"
+    bus = Bus()
+    states = []
+    bus.subscribe("data/state", lambda _, message: states.append(message))
+    comp = ProgressTrackerOid(
+        bus=bus,
+        subscribe="test/status~status;test/checkpoint~checkpoint",
+        publish="state~data/state",
+        properties={"state_file": str(state_file), "identifier_path": "row.id"},
+    )
+    await comp.start()
+
+    await bus.publish("test/status", {})
+    assert states == [{
+        "state_file": str(state_file.resolve()),
+        "exists": False,
+        "completed_count": 0,
+        "format": "keys-v1",
+    }]
+
+    await bus.publish("test/checkpoint", {"row": {"id": "usr-99"}})
+    await bus.publish("test/status", {})
+    assert states[-1] == {
+        "state_file": str(state_file.resolve()),
+        "exists": True,
+        "completed_count": 1,
+        "format": "keys-v1",
+    }
+    await comp.stop()
+
+
 async def _run_pipeline_cycle(state_file: Path, output_file: Path) -> tuple[list, list]:
     bus = Bus()
     forwarded, skipped = [], []

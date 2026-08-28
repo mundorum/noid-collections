@@ -24,6 +24,9 @@ input_notices:
   checkpoint:
     description: Success acknowledgement containing the same identifier as the forwarded
       row.
+  status:
+    description: Requests the tracker journal's resolved path and currently loaded
+      checkpoint count.
 output_notices:
   schema:
     description: Publishes the schema notice downstream unchanged.
@@ -33,5 +36,8 @@ output_notices:
     description: Publishes a row whose identifier is already checkpointed.
   checkpoint_recorded:
     description: Emitted only after the identifier is durably appended.
+  state:
+    description: 'Current tracker state. Payload keys: state_file, exists, completed_count,
+      format.'
   error:
     description: 'A checkpoint could not be persisted. Payload keys: error, key.'

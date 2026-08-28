@@ -3,6 +3,8 @@ import csv
 import os
 import tempfile
 
+import pytest
+
 from noid.core.bus import Bus
 from noid_collections.data.csv_writer.csv_writer import CsvWriterOid
 
@@ -286,6 +288,67 @@ async def test_row_written_preserves_the_row_envelope() -> None:
             os.unlink(path)
         if os.path.exists(f"{path}.tmp"):
             os.unlink(f"{path}.tmp")
+
+
+async def test_append_preserves_prior_rows_and_empty_resumed_runs(tmp_path) -> None:
+    path = tmp_path / "results.csv"
+
+    first_bus = Bus()
+    first = CsvWriterOid(
+        bus=first_bus,
+        subscribe="test/schema~schema;test/row~row;test/done~done",
+        properties={"output_file": str(path), "append": True},
+    )
+    await first.start()
+    await first_bus.publish("test/schema", {"columns": ["id", "name"]})
+    await first_bus.publish("test/row", {"row": {"id": "a", "name": "Alice"}})
+    await first_bus.publish("test/done", {})
+    await first.stop()
+
+    resumed_bus = Bus()
+    resumed = CsvWriterOid(
+        bus=resumed_bus,
+        subscribe="test/schema~schema;test/row~row;test/done~done",
+        properties={"output_file": str(path), "append": True},
+    )
+    await resumed.start()
+    await resumed_bus.publish("test/schema", {"columns": ["id", "name"]})
+    await resumed_bus.publish("test/row", {"row": {"id": "b", "name": "Bob"}})
+    await resumed_bus.publish("test/done", {})
+    await resumed.stop()
+
+    empty_resume_bus = Bus()
+    empty_resume = CsvWriterOid(
+        bus=empty_resume_bus,
+        subscribe="test/schema~schema;test/done~done",
+        properties={"output_file": str(path), "append": True},
+    )
+    await empty_resume.start()
+    await empty_resume_bus.publish("test/schema", {"columns": ["id", "name"]})
+    await empty_resume_bus.publish("test/done", {})
+    await empty_resume.stop()
+
+    columns, rows = _read_csv(str(path))
+    assert columns == ["id", "name"]
+    assert rows == [{"id": "a", "name": "Alice"}, {"id": "b", "name": "Bob"}]
+
+
+async def test_append_rejects_a_different_existing_schema(tmp_path) -> None:
+    path = tmp_path / "results.csv"
+    path.write_text("old_column\nvalue\n", encoding="utf-8")
+    bus = Bus()
+    comp = CsvWriterOid(
+        bus=bus,
+        subscribe="test/schema~schema",
+        properties={"output_file": str(path), "append": True},
+    )
+    await comp.start()
+
+    with pytest.raises(ValueError, match="different schema"):
+        await bus.publish("test/schema", {"columns": ["id", "name"]})
+
+    assert path.read_text(encoding="utf-8") == "old_column\nvalue\n"
+    await comp.stop()
 
 
 async def test_custom_delimiter() -> None:

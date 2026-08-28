@@ -7,10 +7,12 @@ Accepts two input modes, mirroring the output modes of data:csv-source:
   row_by_row — receives `schema` once (column names), then N `row` notices, then `done`
 
 Rows are written straight to a temporary file (`<output_file>.tmp`) as they
-arrive, so memory usage stays bounded regardless of table size. `schema` and
-`table` both (re)start the file: any previously written content is discarded.
-On `done`, the temporary file is atomically moved to `output_file` (replacing
-any existing file there), so `output_file` never shows partial content.
+arrive, so memory usage stays bounded regardless of table size. By default,
+`schema` and `table` both (re)start the file and discard previous content. With
+`append=true`, the existing finalized output is copied into the temporary file
+and new rows are appended only when the incoming schema matches its header.
+On `done`, the temporary file is atomically moved to `output_file`, so
+`output_file` never shows partial content.
 
 The `format` property matches data:csv-source's output format:
   "dict" (default) — rows are dicts {"col": value, ...}
@@ -55,6 +57,7 @@ Scene usage:
 import asyncio
 import csv
 import os
+import shutil
 from pathlib import Path
 from typing import List, Optional, TextIO, Union
 
@@ -79,6 +82,13 @@ from noid.core.component import Noid, OidComponent
         "encoding": {
             "default": "utf-8",
             "description": "File encoding.",
+        },
+        "append": {
+            "default": False,
+            "description": (
+                "If true, preserve an existing finalized CSV and append rows with the same schema. "
+                "The existing header must exactly match the incoming columns."
+            ),
         },
         "format": {
             "default": "dict",
@@ -107,7 +117,7 @@ from noid.core.component import Noid, OidComponent
         "schema": {
             "description": (
                 "Column names for row-by-row mode. (Re)starts the file, discarding "
-                "any previously written content. Key: columns (list of str). "
+                "any previously written content unless append is true. Key: columns (list of str). "
                 "Optional label key is ignored."
             ),
         },
@@ -155,13 +165,13 @@ class CsvWriterOid(OidComponent):
         columns = list(msg.get("columns", []))
         rows = list(msg.get("rows", []))
         fmt = self.format
-        await asyncio.to_thread(self._reset_and_open, columns)
+        await asyncio.to_thread(self._reset_and_open, columns, self.append)
         await asyncio.to_thread(self._write_rows, rows, columns, fmt)
         await self._notify("written", {})
 
     async def handle_schema(self, notice: str, message: dict) -> None:
         columns = list((message or {}).get("columns", []))
-        await asyncio.to_thread(self._reset_and_open, columns)
+        await asyncio.to_thread(self._reset_and_open, columns, self.append)
         await self._notify("written", {})
 
     async def handle_row(self, notice: str, message: dict) -> None:
@@ -169,7 +179,7 @@ class CsvWriterOid(OidComponent):
         if row is None:
             return
         if self._file is None:
-            await asyncio.to_thread(self._reset_and_open, self._columns)
+            await asyncio.to_thread(self._reset_and_open, self._columns, self.append)
         await asyncio.to_thread(self._write_rows, [row], self._columns, self.format)
         await self._notify("written", {})
         await self._notify("row_written", message)
@@ -180,14 +190,28 @@ class CsvWriterOid(OidComponent):
 
     # -- blocking helpers, always run via asyncio.to_thread --
 
-    def _reset_and_open(self, columns: List[str]) -> None:
+    def _reset_and_open(self, columns: List[str], append: bool = False) -> None:
         self._close_file()
         self._columns = columns
-        self._tmp_path = f"{self.output_file}.tmp"
-        Path(self._tmp_path).parent.mkdir(parents=True, exist_ok=True)
-        self._file = open(self._tmp_path, "w", newline="", encoding=self.encoding)
+        tmp_path = f"{self.output_file}.tmp"
+        Path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
+        output_path = Path(self.output_file)
+        if append and output_path.exists():
+            with output_path.open("r", newline="", encoding=self.encoding) as existing:
+                existing_columns = next(csv.reader(existing, delimiter=self.delimiter), [])
+            if existing_columns != columns:
+                raise ValueError(
+                    "Cannot append CSV data with a different schema: "
+                    f"existing columns {existing_columns!r}, incoming columns {columns!r}."
+                )
+            shutil.copyfile(output_path, tmp_path)
+            mode = "a"
+        else:
+            mode = "w"
+        self._file = open(tmp_path, mode, newline="", encoding=self.encoding)
+        self._tmp_path = tmp_path
         self._writer = csv.writer(self._file, delimiter=self.delimiter)
-        if columns:
+        if mode == "w" and columns:
             self._writer.writerow(columns)
 
     def _write_rows(self, rows: List[Union[dict, list]], columns: List[str], fmt: str) -> None:
