@@ -122,10 +122,16 @@ from noid.core.component import Noid, OidComponent
             "description": "Finalizes the file and emits the done notice.",
         },
     },
-    "publish": "written~csv/written;done~csv/done",
+    "publish": "written~csv/written;row_written~csv/row-written;done~csv/done",
     "output_notices": {
         "written": {
             "description": "Emitted after each physical write (schema/table/row).",
+        },
+        "row_written": {
+            "description": (
+                "Emitted after a row is flushed and synced to the temporary output file. "
+                "Payload is the original row envelope, preserving its identifier for acknowledgements."
+            ),
         },
         "done": {
             "description": (
@@ -166,6 +172,7 @@ class CsvWriterOid(OidComponent):
             await asyncio.to_thread(self._reset_and_open, self._columns)
         await asyncio.to_thread(self._write_rows, [row], self._columns, self.format)
         await self._notify("written", {})
+        await self._notify("row_written", message)
 
     async def handle_done(self, notice: str, message: dict) -> None:
         await asyncio.to_thread(self._finalize)
@@ -189,6 +196,8 @@ class CsvWriterOid(OidComponent):
                 self._writer.writerow(row)
             else:
                 self._writer.writerow([row.get(col, "") for col in columns])
+        self._file.flush()
+        os.fsync(self._file.fileno())
 
     def _close_file(self) -> None:
         if self._file is not None:

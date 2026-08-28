@@ -42,6 +42,9 @@ input_notices:
 output_notices:
   written:
     description: Emitted after each physical write (schema/table/row).
+  row_written:
+    description: Emitted after a row is flushed and synced to the temporary output
+      file. Payload is the original row envelope, preserving its identifier for acknowledgements.
   done:
     description: 'Emitted once the file is finalized and ready to use. Payload key:
       file (str).'

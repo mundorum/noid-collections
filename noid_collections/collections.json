@@ -109,7 +109,7 @@
     "modules": [
       "noid_collections.data.csv_writer.csv_writer"
     ],
-    "description": "Buffers incoming CSV table or row notices and writes them to a file when a done notice is received. Mirrors the two output modes of data:csv-source: complete table (table + done) or row-by-row (schema + row… + done)."
+    "description": "Streams incoming CSV table or row notices to a temporary file and atomically publishes it to output_file when a done notice is received. Mirrors the two output modes of data:csv-source: complete table (table + done) or row-by-row (schema + row… + done)."
   },
   {
     "name": "Data — Progress Tracker",
@@ -117,7 +117,7 @@
     "modules": [
       "noid_collections.data.progress_tracker.progress_tracker"
     ],
-    "description": "Filters out already processed dataset rows based on a persistent state file."
+    "description": "Forwards uncheckpointed rows and persists identifiers in a separate append-only journal."
   },
   {
     "name": "LM Agents — Persistent LM Agent",

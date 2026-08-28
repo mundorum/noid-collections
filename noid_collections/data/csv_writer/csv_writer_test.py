@@ -260,6 +260,34 @@ async def test_written_fires_once_per_schema_and_row() -> None:
             os.unlink(path)
 
 
+async def test_row_written_preserves_the_row_envelope() -> None:
+    bus = Bus()
+    row_written = []
+    bus.subscribe("csv/row-written", lambda _, message: row_written.append(message))
+
+    path = _tmp_path()
+    try:
+        comp = CsvWriterOid(
+            bus=bus,
+            subscribe="test/schema~schema;test/row~row;test/done~done",
+            properties={"output_file": path},
+        )
+        await comp.start()
+
+        envelope = {"index": 1, "row": {"id": "a", "name": "Alice"}}
+        await bus.publish("test/schema", {"columns": ["id", "name"]})
+        await bus.publish("test/row", envelope)
+
+        assert row_written == [envelope]
+        await bus.publish("test/done", {})
+        await comp.stop()
+    finally:
+        if os.path.exists(path):
+            os.unlink(path)
+        if os.path.exists(f"{path}.tmp"):
+            os.unlink(f"{path}.tmp")
+
+
 async def test_custom_delimiter() -> None:
     bus = Bus()
     path = _tmp_path()

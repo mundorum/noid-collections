@@ -1,33 +1,37 @@
 id: data:progress-tracker
 name: Progress Tracker
-description: Filters out already processed dataset rows based on a persistent state
-  file.
+description: Forwards uncheckpointed rows and persists identifiers in a separate append-only
+  journal.
 properties:
   state_file:
-    description: Path to the local CSV file storing completed row data.
-    default: progress.csv
+    description: Path to the UTF-8 checkpoint journal (one identifier per line), separate
+      from result files.
+    default: progress.keys
     required: false
+    kind: resource
   identifier_path:
-    description: Dotted path in the incoming row to resolve the unique identifier
-      (e.g. 'index' or 'row.name').
+    description: Dotted path containing a stable identifier (for example 'row.id').
+      'index' is safe only with immutable row order.
     default: index
     required: false
 input_notices:
   schema:
-    description: Optional schema notice to dynamically set the progress CSV file name
-      based on the schema label.
+    description: Schema notice to forward; it never changes the checkpoint journal
+      path.
   row:
-    description: Incoming row to check. If already processed, it is skipped. Otherwise,
-      it is forwarded.
+    description: Incoming row to check. Completed rows are skipped; other rows are
+      forwarded.
   checkpoint:
-    description: Signals that a row was successfully completed. Its row data is appended
-      to the CSV.
+    description: Success acknowledgement containing the same identifier as the forwarded
+      row.
 output_notices:
   schema:
-    description: Publishes the schema notice downstream.
+    description: Publishes the schema notice downstream unchanged.
   forward:
-    description: Forwards the incoming row if it has not been processed yet.
+    description: Forwards a row whose identifier is not checkpointed.
   skipped:
-    description: Publishes the skipped row notice if it has already been processed.
+    description: Publishes a row whose identifier is already checkpointed.
   checkpoint_recorded:
-    description: Publishes the recorded checkpoint payload after persisting it.
+    description: Emitted only after the identifier is durably appended.
+  error:
+    description: 'A checkpoint could not be persisted. Payload keys: error, key.'
