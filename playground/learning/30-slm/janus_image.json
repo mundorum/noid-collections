@@ -1,0 +1,39 @@
+{
+  "title": "Image agent demo — text → Janus-Pro → image file",
+  "imports": [
+    "noid:data.text_source",
+    "noid:lm_agents.image",
+    "noid:basic.console_display"
+  ],
+  "components": [
+    {
+      "type": "data:text-source",
+      "id":   "src",
+      "properties": {
+        "label":   "scene",
+        "content": "an elderly woman with glasses sitting in a doctor's office"
+      },
+      "subscribe": "player/start~load",
+      "publish":   "text~pipeline/input"
+    },
+    {
+      "type": "lm:image-agent",
+      "id":   "painter",
+      "properties": {
+        "backend":         "janus",
+        "prompt_template": "{{input}}, simple colored drawing, clean lines, white background",
+        "output_dir":      "output/images",
+        "seed":            42
+      },
+      "subscribe": "pipeline/input~input",
+      "publish":   "document~pipeline/image"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "display",
+      "properties": {"label": "Image"},
+      "subscribe": "pipeline/image~show",
+      "publish":   "output~player/done"
+    }
+  ]
+}

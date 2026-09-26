@@ -120,11 +120,11 @@
     "description": "Forwards uncheckpointed rows and persists identifiers in a separate append-only journal."
   },
   {
-    "name": "LM Agents — Persistent LM Agent",
-    "pip_extra": null,
+    "name": "LM Agents — Image Agent",
+    "pip_extra": "image",
     "modules": [
-      "noid_collections.lm_agents.persistent_agent.persistent_agent"
+      "noid_collections.lm_agents.image.image"
     ],
-    "description": "Calls an Ollama LLM with a rendered prompt template, featuring error retries and timeout backoffs."
+    "description": "Generates images from a rendered prompt template with a pluggable text-to-image model (Janus-Pro by default), saving PNG files and publishing their paths."
   }
 ]

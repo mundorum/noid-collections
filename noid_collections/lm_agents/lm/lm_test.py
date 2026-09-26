@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from noid.core.bus import Bus
-from noid_collections.lm_agents.lm.lm import LMAgentOid
+from noid_collections.lm_agents.lm.lm import PersistentLMAgentOid
 
 
 @contextmanager

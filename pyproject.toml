@@ -38,6 +38,16 @@ ner = [
     "transformers>=4.40",
     "torch",
 ]
+# Text-to-image agent (lm:image-agent) — heavy: downloads large model weights.
+# transformers<5: Janus-Pro image generation is broken in 5.x
+# (_prepare_static_cache signature mismatch); diffusers backs the "diffusers" backend.
+image = [
+    "torch>=2.4",
+    "transformers>=4.51,<5",
+    "accelerate",
+    "pillow",
+    "diffusers>=0.30",
+]
 # Convenience shorthand: both LM sub-extras
 slm = [
     "mundorum-noid-collections[lm,ner]",
@@ -61,7 +71,7 @@ dev = [
 ]
 # Install everything
 all = [
-    "mundorum-noid-collections[slm,sql,prolog,pdf]",
+    "mundorum-noid-collections[slm,image,sql,prolog,pdf]",
 ]
 
 [tool.setuptools.packages.find]

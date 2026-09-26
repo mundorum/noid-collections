@@ -4,11 +4,12 @@ lm:persistent-agent — Robust LLM component with retry logic and timeout backof
 Exposes retries, initial_timeout, timeout_multiplier, and backoff_factor. Runs LLM call in a thread executor to avoid blocking the event loop.
 """
 import copy
-import re
 import asyncio
 import logging
 
 from noid.core.component import Noid, OidComponent
+
+from noid_collections.lm_agents.prompt_template import render_template
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ class PersistentLMAgentOid(OidComponent):
         content = message.get("content", "") if isinstance(message, dict) else str(message)
         question = message.get("question", "") if isinstance(message, dict) else ""
 
-        prompt = self._render_template(self.prompt_template, content, question, message)
+        prompt = render_template(self.prompt_template, content, question, message)
 
         retries = int(getattr(self, "retries", 4))
         initial_timeout = float(getattr(self, "initial_timeout", 30.0))
@@ -205,26 +206,3 @@ class PersistentLMAgentOid(OidComponent):
             ) from last_error
 
         return fallback_val
-
-    @staticmethod
-    def _render_template(template: str, input_val: str, question: str, message: dict) -> str:
-        result = re.sub(re.escape("{{input}}"), input_val, template, flags=re.IGNORECASE)
-        result = re.sub(re.escape("{{question}}"), question, result, flags=re.IGNORECASE)
-        if isinstance(message, dict):
-            def _replace(match: re.Match) -> str:
-                key = match.group(1)
-                if key in message:
-                    return str(message[key])
-                return _resolve_path(message, key)
-            result = re.sub(r"\{\{([^}]+)\}\}", _replace, result)
-        return result
-
-
-def _resolve_path(obj: dict, path: str) -> str:
-    """Walk a dot-separated path in a nested dict; return str value or empty string."""
-    current = obj
-    for part in path.split("."):
-        if not isinstance(current, dict) or part not in current:
-            return ""
-        current = current[part]
-    return str(current)

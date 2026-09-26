@@ -1,0 +1,49 @@
+{
+  "title": "Image agent demo — text → LLM visual prompt → Janus-Pro → image file",
+  "imports": [
+    "noid:data.text_source",
+    "noid:lm_agents.lm",
+    "noid:lm_agents.image",
+    "noid:basic.console_display"
+  ],
+  "components": [
+    {
+      "type": "data:text-source",
+      "id":   "src",
+      "properties": {
+        "label":   "scene",
+        "content": "a child with a fever, worried mother at the bedside"
+      },
+      "subscribe": "player/start~load",
+      "publish":   "text~pipeline/input"
+    },
+    {
+      "type": "lm:lm-agent",
+      "id":   "prompter",
+      "properties": {
+        "model":           "llama3.2:3b",
+        "temperature":     0.3,
+        "prompt_template": "Rewrite the following description as a single short prompt for an image generator. Describe only what is visible: characters, clothing, expressions, objects, setting. Use at most 40 words, no preamble, no quotes.\n\nDescription: {{input}}\n\nPrompt:"
+      },
+      "subscribe": "pipeline/input~input",
+      "publish":   "document~pipeline/visual-prompt"
+    },
+    {
+      "type": "lm:image-agent",
+      "id":   "painter",
+      "properties": {
+        "prompt_template": "{{input}}, cartoon illustration, flat colors, bold outlines, friendly style",
+        "output_dir":      "output/images"
+      },
+      "subscribe": "pipeline/visual-prompt~input",
+      "publish":   "document~pipeline/image"
+    },
+    {
+      "type": "basic:console-display",
+      "id":   "display",
+      "properties": {"label": "Image"},
+      "subscribe": "pipeline/image~show",
+      "publish":   "output~player/done"
+    }
+  ]
+}

@@ -39,6 +39,7 @@ GROUP_LABELS: Dict[str, str] = {
 PIP_EXTRA_MAP: Dict[str, str] = {
     "lm_agents/lm": "lm",
     "lm_agents/ner": "ner",
+    "lm_agents/image": "image",
     "data/sql": "sql",
     "logic/prolog": "prolog",
     "pdf": "pdf",  # prefix match: covers all pdf/* component dirs
