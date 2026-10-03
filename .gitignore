@@ -220,4 +220,4 @@ __marimo__/
 publish
 output/images
 
-.claude/*
+.claude
