@@ -25,6 +25,11 @@ Properties:
     delimiter   — field separator (default: ","); use "\t" for tab-separated
                   output. Must match the delimiter used by any paired
                   data:csv-source upstream, the same way `format` must match.
+    schema      — default column names, written as a CSV header line using
+                  `delimiter` (e.g. "id,name"). Used when rows arrive without
+                  a preceding `schema` notice, or when a `schema`/`table`
+                  notice carries no `columns`. Empty (default) means no
+                  default schema.
 
 The quote character is not configurable: Python's csv module already quotes
 a field only when needed (default quotechar `"`), so there is nothing to
@@ -33,6 +38,7 @@ configure or auto-detect.
 Received notices:
     table  — {"columns": [...], "rows": [...]}  complete table; (re)starts the file
     schema — {"columns": [...]}                 column names; (re)starts the file
+                                                (falls back to the `schema` property)
     row    — {"row": {...} or [...]}             one row, written immediately
     done   — {}                                 finalize the file
 
@@ -105,6 +111,14 @@ from noid.core.component import Noid, OidComponent
                 "Must match the delimiter used by any paired data:csv-source."
             ),
         },
+        "schema": {
+            "default": "",
+            "description": (
+                "Default column names as a CSV header line using `delimiter` "
+                "(e.g. \"id,name\"). Used when rows arrive without a preceding "
+                "schema notice, or when a schema/table notice has no columns."
+            ),
+        },
     },
     "receive": {
         "table": {
@@ -117,7 +131,8 @@ from noid.core.component import Noid, OidComponent
         "schema": {
             "description": (
                 "Column names for row-by-row mode. (Re)starts the file, discarding "
-                "any previously written content unless append is true. Key: columns (list of str). "
+                "any previously written content unless append is true. Key: columns (list of str); "
+                "if absent or empty, the schema property is used. "
                 "Optional label key is ignored."
             ),
         },
@@ -162,7 +177,7 @@ class CsvWriterOid(OidComponent):
 
     async def handle_table(self, notice: str, message: dict) -> None:
         msg = message or {}
-        columns = list(msg.get("columns", []))
+        columns = list(msg.get("columns") or self._default_columns())
         rows = list(msg.get("rows", []))
         fmt = self.format
         await asyncio.to_thread(self._reset_and_open, columns, self.append)
@@ -170,7 +185,7 @@ class CsvWriterOid(OidComponent):
         await self._notify("written", {})
 
     async def handle_schema(self, notice: str, message: dict) -> None:
-        columns = list((message or {}).get("columns", []))
+        columns = list((message or {}).get("columns") or self._default_columns())
         await asyncio.to_thread(self._reset_and_open, columns, self.append)
         await self._notify("written", {})
 
@@ -179,7 +194,8 @@ class CsvWriterOid(OidComponent):
         if row is None:
             return
         if self._file is None:
-            await asyncio.to_thread(self._reset_and_open, self._columns, self.append)
+            columns = self._columns or self._default_columns()
+            await asyncio.to_thread(self._reset_and_open, columns, self.append)
         await asyncio.to_thread(self._write_rows, [row], self._columns, self.format)
         await self._notify("written", {})
         await self._notify("row_written", message)
@@ -187,6 +203,16 @@ class CsvWriterOid(OidComponent):
     async def handle_done(self, notice: str, message: dict) -> None:
         await asyncio.to_thread(self._finalize)
         await self._notify("done", {"file": self.output_file})
+
+    def _default_columns(self) -> List[str]:
+        """Parse the `schema` property (a CSV header line) into column names."""
+        schema = self.schema
+        if not schema:
+            return []
+        if isinstance(schema, (list, tuple)):
+            return [str(c).strip() for c in schema]
+        header = next(csv.reader([str(schema).strip()], delimiter=self.delimiter), [])
+        return [c.strip() for c in header]
 
     # -- blocking helpers, always run via asyncio.to_thread --
 

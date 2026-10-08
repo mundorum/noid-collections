@@ -402,3 +402,61 @@ async def test_pre_existing_output_file_is_overwritten() -> None:
     finally:
         if os.path.exists(path):
             os.unlink(path)
+
+
+async def test_default_schema_used_when_rows_arrive_without_schema(tmp_path) -> None:
+    path = tmp_path / "out.csv"
+    bus = Bus()
+    comp = CsvWriterOid(
+        bus=bus,
+        subscribe="test/row~row;test/done~done",
+        properties={"output_file": str(path), "schema": "id, name"},
+    )
+    await comp.start()
+
+    await bus.publish("test/row",  {"row": {"id": "a", "name": "Alice"}})
+    await bus.publish("test/row",  {"row": {"id": "b", "name": "Bob"}})
+    await bus.publish("test/done", {})
+
+    columns, rows = _read_csv(str(path))
+    assert columns == ["id", "name"]
+    assert rows == [{"id": "a", "name": "Alice"}, {"id": "b", "name": "Bob"}]
+    await comp.stop()
+
+
+async def test_default_schema_used_when_schema_notice_has_no_columns(tmp_path) -> None:
+    path = tmp_path / "out.csv"
+    bus = Bus()
+    comp = CsvWriterOid(
+        bus=bus,
+        subscribe="test/schema~schema;test/row~row;test/done~done",
+        properties={"output_file": str(path), "schema": "x\ty", "delimiter": "\t", "format": "list"},
+    )
+    await comp.start()
+
+    await bus.publish("test/schema", {})
+    await bus.publish("test/row",    {"row": ["1", "2"]})
+    await bus.publish("test/done",   {})
+
+    assert path.read_bytes() == b"x\ty\r\n1\t2\r\n"
+    await comp.stop()
+
+
+async def test_schema_notice_overrides_default_schema(tmp_path) -> None:
+    path = tmp_path / "out.csv"
+    bus = Bus()
+    comp = CsvWriterOid(
+        bus=bus,
+        subscribe="test/schema~schema;test/row~row;test/done~done",
+        properties={"output_file": str(path), "schema": "a,b"},
+    )
+    await comp.start()
+
+    await bus.publish("test/schema", {"columns": ["x", "y"]})
+    await bus.publish("test/row",    {"row": {"x": "1", "y": "2"}})
+    await bus.publish("test/done",   {})
+
+    columns, rows = _read_csv(str(path))
+    assert columns == ["x", "y"]
+    assert rows == [{"x": "1", "y": "2"}]
+    await comp.stop()

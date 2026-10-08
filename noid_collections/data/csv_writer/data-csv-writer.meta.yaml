@@ -30,6 +30,12 @@ properties:
       match the delimiter used by any paired data:csv-source.
     default: ','
     required: false
+  schema:
+    description: Default column names as a CSV header line using `delimiter` (e.g.
+      "id,name"). Used when rows arrive without a preceding schema notice, or when
+      a schema/table notice has no columns.
+    default: ''
+    required: false
 input_notices:
   table:
     description: 'Complete table payload. (Re)starts the file, discarding any previously
@@ -38,7 +44,8 @@ input_notices:
   schema:
     description: 'Column names for row-by-row mode. (Re)starts the file, discarding
       any previously written content unless append is true. Key: columns (list of
-      str). Optional label key is ignored.'
+      str); if absent or empty, the schema property is used. Optional label key is
+      ignored.'
   row:
     description: 'One data row, written immediately. Key: row (dict or list depending
       on format). Optional label and index keys are ignored.'
