@@ -22,6 +22,7 @@
       "id":   "tracker",
       "properties": {
         "state_file": "patients_progress.keys",
+        "generation": 1,
         "identifier_path": "row.name"
       },
       "subscribe": "pipeline/schema~schema;pipeline/row~row;pipeline/checkpoint~checkpoint",

@@ -28,7 +28,7 @@ async def test_checkpoint_is_durable_before_acknowledgement(tmp_path) -> None:
 
     assert forwarded == [row]
     assert recorded == [row]
-    assert state_file.read_text(encoding="utf-8") == "usr-99\n"
+    assert (tmp_path / "progress_1.keys").read_text(encoding="utf-8") == "usr-99\n"
     await comp.stop()
 
     resumed_bus = Bus()
@@ -61,7 +61,7 @@ async def test_schema_does_not_change_configured_journal_path(tmp_path) -> None:
     await comp.start()
     await bus.publish("test/schema", {"label": "patients.csv", "columns": ["id"]})
 
-    assert comp._state_file_abs == str(state_file.resolve())
+    assert comp._state_file_abs == str((tmp_path / "patients_1.keys").resolve())
     assert schemas == [{"label": "patients.csv", "columns": ["id"]}]
     await comp.stop()
 
@@ -81,7 +81,8 @@ async def test_status_reports_resolved_journal_and_loaded_checkpoint_count(tmp_p
 
     await bus.publish("test/status", {})
     assert states == [{
-        "state_file": str(state_file.resolve()),
+        "state_file": str((tmp_path / "progress_1.keys").resolve()),
+        "generation": 1,
         "exists": False,
         "completed_count": 0,
         "format": "keys-v1",
@@ -90,7 +91,8 @@ async def test_status_reports_resolved_journal_and_loaded_checkpoint_count(tmp_p
     await bus.publish("test/checkpoint", {"row": {"id": "usr-99"}})
     await bus.publish("test/status", {})
     assert states[-1] == {
-        "state_file": str(state_file.resolve()),
+        "state_file": str((tmp_path / "progress_1.keys").resolve()),
+        "generation": 1,
         "exists": True,
         "completed_count": 1,
         "format": "keys-v1",
@@ -144,7 +146,7 @@ async def test_resume_survives_csv_writer_replacing_result_file(tmp_path) -> Non
     assert first_skipped == []
     assert second_forwarded == []
     assert len(second_skipped) == 3
-    assert state_file.read_text(encoding="utf-8").splitlines() == ["a", "b", "c"]
+    assert (tmp_path / "patients_1.keys").read_text(encoding="utf-8").splitlines() == ["a", "b", "c"]
 
 
 async def test_line_break_identifier_is_rejected_without_checkpointing(tmp_path) -> None:
@@ -164,5 +166,42 @@ async def test_line_break_identifier_is_rejected_without_checkpointing(tmp_path)
 
     assert recorded == []
     assert errors == [{"error": "Checkpoint identifier cannot contain a line break.", "key": "first\nsecond"}]
-    assert not state_file.exists()
+    assert not (tmp_path / "progress_1.keys").exists()
     await comp.stop()
+
+
+def test_journal_path_inserts_generation_before_extension() -> None:
+    path = ProgressTrackerOid._journal_path
+    assert path("progress.keys", 1) == "progress_1.keys"
+    assert path("out/patients.keys", 3) == str(Path("out/patients_3.keys"))
+    assert path("progress", 2) == "progress_2"
+    assert path("progress.keys", 0) == "progress.keys"
+
+
+async def test_new_generation_restarts_tracking_in_fresh_journal(tmp_path) -> None:
+    state_file = tmp_path / "progress.keys"
+    row = {"row": {"id": "usr-99"}}
+
+    async def run(generation) -> tuple[list, list]:
+        bus = Bus()
+        forwarded, skipped = [], []
+        bus.subscribe("data/row", lambda _, message: forwarded.append(message))
+        bus.subscribe("data/skipped", lambda _, message: skipped.append(message))
+        comp = ProgressTrackerOid(
+            bus=bus,
+            subscribe="test/row~row;test/checkpoint~checkpoint",
+            publish="forward~data/row;skipped~data/skipped",
+            properties={"state_file": str(state_file), "identifier_path": "row.id", "generation": generation},
+        )
+        await comp.start()
+        await bus.publish("test/row", row)
+        await bus.publish("test/checkpoint", row)
+        await comp.stop()
+        return forwarded, skipped
+
+    assert await run(1) == ([row], [])
+    assert await run(1) == ([], [row])
+    # Scene JSON may deliver the generation as a string.
+    assert await run("2") == ([row], [])
+    assert (tmp_path / "progress_1.keys").read_text(encoding="utf-8") == "usr-99\n"
+    assert (tmp_path / "progress_2.keys").read_text(encoding="utf-8") == "usr-99\n"

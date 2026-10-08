@@ -25,7 +25,11 @@ logger = logging.getLogger(__name__)
         "state_file": {
             "default": "progress.keys",
             "kind": "resource",
-            "description": "Path to the UTF-8 checkpoint journal (one identifier per line), separate from result files.",
+            "description": "Base path of the UTF-8 checkpoint journal (one identifier per line), separate from result files. The generation is inserted before the extension.",
+        },
+        "generation": {
+            "default": 1,
+            "description": "Journal generation inserted before the state_file extension (progress.keys -> progress_1.keys). Increment it to restart tracking in a fresh journal; 0 uses state_file unchanged.",
         },
         "identifier_path": {
             "default": "index",
@@ -36,7 +40,7 @@ logger = logging.getLogger(__name__)
         "schema": {"description": "Schema notice to forward; it never changes the checkpoint journal path."},
         "row": {"description": "Incoming row to check. Completed rows are skipped; other rows are forwarded."},
         "checkpoint": {"description": "Success acknowledgement containing the same identifier as the forwarded row."},
-        "status": {"description": "Requests the tracker journal's resolved path and currently loaded checkpoint count."},
+        "status": {"description": "Requests the tracker journal's resolved path, generation and currently loaded checkpoint count."},
     },
     "publish": "forward~data/row;skipped~data/skipped;schema~data/schema;checkpoint_recorded~data/checkpoint;state~data/state;error~data/error",
     "output_notices": {
@@ -44,7 +48,7 @@ logger = logging.getLogger(__name__)
         "forward": {"description": "Forwards a row whose identifier is not checkpointed."},
         "skipped": {"description": "Publishes a row whose identifier is already checkpointed."},
         "checkpoint_recorded": {"description": "Emitted only after the identifier is durably appended."},
-        "state": {"description": "Current tracker state. Payload keys: state_file, exists, completed_count, format."},
+        "state": {"description": "Current tracker state. Payload keys: state_file, generation, exists, completed_count, format."},
         "error": {"description": "A checkpoint could not be persisted. Payload keys: error, key."},
     },
 })
@@ -53,9 +57,20 @@ class ProgressTrackerOid(OidComponent):
 
     async def start(self) -> None:
         await super().start()
-        self._state_file_abs = os.path.abspath(self.state_file)
+        self._generation = int(self.generation or 0)
+        if self._generation < 0:
+            raise ValueError(f"Progress generation must be >= 0, got {self._generation}")
+        self._state_file_abs = os.path.abspath(self._journal_path(self.state_file, self._generation))
         self._completed_keys: Set[str] = await asyncio.to_thread(self._load_keys)
         self._checkpoint_lock = asyncio.Lock()
+
+    @staticmethod
+    def _journal_path(state_file: str, generation: int) -> str:
+        """Insert the generation before the extension: progress.keys -> progress_1.keys."""
+        if generation == 0:
+            return state_file
+        path = Path(state_file)
+        return str(path.with_name(f"{path.stem}_{generation}{path.suffix}"))
 
     def _load_keys(self) -> Set[str]:
         """Load the journal. A missing journal means no work has completed yet."""
@@ -86,6 +101,7 @@ class ProgressTrackerOid(OidComponent):
         """Publish the effective journal state without modifying it."""
         await self._notify("state", {
             "state_file": self._state_file_abs,
+            "generation": self._generation,
             "exists": Path(self._state_file_abs).is_file(),
             "completed_count": len(self._completed_keys),
             "format": "keys-v1",

@@ -4,11 +4,17 @@ description: Forwards uncheckpointed rows and persists identifiers in a separate
   journal.
 properties:
   state_file:
-    description: Path to the UTF-8 checkpoint journal (one identifier per line), separate
-      from result files.
+    description: Base path of the UTF-8 checkpoint journal (one identifier per line),
+      separate from result files. The generation is inserted before the extension.
     default: progress.keys
     required: false
     kind: resource
+  generation:
+    description: Journal generation inserted before the state_file extension (progress.keys
+      -> progress_1.keys). Increment it to restart tracking in a fresh journal; 0
+      uses state_file unchanged.
+    default: 1
+    required: false
   identifier_path:
     description: Dotted path containing a stable identifier (for example 'row.id').
       'index' is safe only with immutable row order.
@@ -25,8 +31,8 @@ input_notices:
     description: Success acknowledgement containing the same identifier as the forwarded
       row.
   status:
-    description: Requests the tracker journal's resolved path and currently loaded
-      checkpoint count.
+    description: Requests the tracker journal's resolved path, generation and currently
+      loaded checkpoint count.
 output_notices:
   schema:
     description: Publishes the schema notice downstream unchanged.
@@ -37,7 +43,7 @@ output_notices:
   checkpoint_recorded:
     description: Emitted only after the identifier is durably appended.
   state:
-    description: 'Current tracker state. Payload keys: state_file, exists, completed_count,
-      format.'
+    description: 'Current tracker state. Payload keys: state_file, generation, exists,
+      completed_count, format.'
   error:
     description: 'A checkpoint could not be persisted. Payload keys: error, key.'
