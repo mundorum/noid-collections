@@ -48,7 +48,9 @@ input_notices:
       ignored.'
   row:
     description: 'One data row, written immediately. Key: row (dict or list depending
-      on format). Optional label and index keys are ignored.'
+      on format). Optional label and index keys are ignored. In dict format, a flat
+      message without a row key is written as the row itself (its keys matched to
+      columns).'
   done:
     description: Finalizes the file and emits the done notice.
 output_notices:

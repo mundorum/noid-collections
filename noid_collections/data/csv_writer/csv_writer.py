@@ -39,7 +39,9 @@ Received notices:
     table  — {"columns": [...], "rows": [...]}  complete table; (re)starts the file
     schema — {"columns": [...]}                 column names; (re)starts the file
                                                 (falls back to the `schema` property)
-    row    — {"row": {...} or [...]}             one row, written immediately
+    row    — {"row": {...} or [...]}             one row, written immediately;
+             in "dict" format a flat message without a "row" key
+             (e.g. {"prompt": ..., "model": ...}) is itself the row
     done   — {}                                 finalize the file
 
 Published notices:
@@ -140,7 +142,9 @@ from noid.core.component import Noid, OidComponent
             "description": (
                 "One data row, written immediately. "
                 "Key: row (dict or list depending on format). "
-                "Optional label and index keys are ignored."
+                "Optional label and index keys are ignored. "
+                "In dict format, a flat message without a row key is "
+                "written as the row itself (its keys matched to columns)."
             ),
         },
         "done": {
@@ -190,9 +194,14 @@ class CsvWriterOid(OidComponent):
         await self._notify("written", {})
 
     async def handle_row(self, notice: str, message: dict) -> None:
-        row = (message or {}).get("row")
+        msg = message or {}
+        row = msg.get("row")
         if row is None:
-            return
+            # Flat message (no "row" envelope): in dict format the message
+            # itself is the row, e.g. lm:lm-agent's rendered_prompt.
+            if self.format == "list" or not isinstance(msg, dict) or not msg:
+                return
+            row = msg
         if self._file is None:
             columns = self._columns or self._default_columns()
             await asyncio.to_thread(self._reset_and_open, columns, self.append)

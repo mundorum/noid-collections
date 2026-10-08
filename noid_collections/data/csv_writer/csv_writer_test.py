@@ -460,3 +460,44 @@ async def test_schema_notice_overrides_default_schema(tmp_path) -> None:
     assert columns == ["x", "y"]
     assert rows == [{"x": "1", "y": "2"}]
     await comp.stop()
+
+
+async def test_flat_message_without_row_key_is_written_as_row(tmp_path) -> None:
+    # e.g. lm:lm-agent's rendered_prompt: {label, index, prompt, model, dry_run}
+    path = tmp_path / "out.csv"
+    bus = Bus()
+    comp = CsvWriterOid(
+        bus=bus,
+        subscribe="test/row~row;test/done~done",
+        properties={"output_file": str(path), "schema": "label,index,prompt,model,dry_run"},
+    )
+    await comp.start()
+
+    await bus.publish("test/row", {"label": "p", "index": 0, "prompt": "Hi", "model": "m", "dry_run": True})
+    await bus.publish("test/row", {"label": "p", "index": 1, "prompt": "Yo", "model": "m", "dry_run": True})
+    await bus.publish("test/done", {})
+
+    columns, rows = _read_csv(str(path))
+    assert columns == ["label", "index", "prompt", "model", "dry_run"]
+    assert rows == [
+        {"label": "p", "index": "0", "prompt": "Hi", "model": "m", "dry_run": "True"},
+        {"label": "p", "index": "1", "prompt": "Yo", "model": "m", "dry_run": "True"},
+    ]
+    await comp.stop()
+
+
+async def test_flat_message_ignored_in_list_format(tmp_path) -> None:
+    path = tmp_path / "out.csv"
+    bus = Bus()
+    comp = CsvWriterOid(
+        bus=bus,
+        subscribe="test/row~row;test/done~done",
+        properties={"output_file": str(path), "schema": "a,b", "format": "list"},
+    )
+    await comp.start()
+
+    await bus.publish("test/row", {"a": "1", "b": "2"})
+    await bus.publish("test/done", {})
+
+    assert not path.exists()
+    await comp.stop()
