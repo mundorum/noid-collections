@@ -9,7 +9,7 @@ import logging
 
 from noid.core.component import Noid, OidComponent
 
-from noid_collections.lm_agents.prompt_template import render_template
+from noid_collections.lm_agents.prompt_template import render_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +73,14 @@ logger = logging.getLogger(__name__)
             "default": "LLM_ERROR",
             "description": "Value written to the output field when error_mode is 'fallback_value' and all retries fail.",
         },
+        "dry_run": {
+            "default": False,
+            "description": (
+                "If true, render the prompt and publish it as `rendered_prompt` without "
+                "calling the LLM. `document` and `row` are not published, so downstream "
+                "writers and progress trackers do not record anything."
+            ),
+        },
     },
     "receive": {
         "input": {
@@ -94,7 +102,10 @@ logger = logging.getLogger(__name__)
             ),
         },
     },
-    "publish": "document~lm/document;schema~lm/schema;row~lm/row",
+    "publish": (
+        "document~lm/document;schema~lm/schema;row~lm/row"
+        ";rendered_prompt~lm/rendered_prompt"
+    ),
     "output_notices": {
         "document": {
             "description": (
@@ -114,13 +125,24 @@ logger = logging.getLogger(__name__)
                 "label/index are passed through unchanged."
             ),
         },
+        "rendered_prompt": {
+            "description": (
+                "Prompt with the input fields injected, exactly as sent to the LLM. "
+                "Emitted before every LLM call, and instead of it when dry_run is true. "
+                "Payload keys: prompt (str), model (str), dry_run (bool); label/index "
+                "are passed through from row notices."
+            ),
+        },
     },
 })
 class PersistentLMAgentOid(OidComponent):
     """Calls an Ollama model with a rendered prompt, featuring retries and backoffs."""
 
     async def handle_input(self, notice: str, message: dict) -> None:
-        reply = await self._infer_with_retry(message)
+        prompt = await self._render_and_publish(message, {})
+        if self._is_dry_run():
+            return
+        reply = await self._infer_with_retry(prompt)
 
         csv_field = getattr(self, "csv_field", "")
         if csv_field and isinstance(message, dict):
@@ -146,9 +168,13 @@ class PersistentLMAgentOid(OidComponent):
         if not csv_field:
             return
 
-        reply = await self._infer_with_retry(message)
-
         envelope = dict(message) if isinstance(message, dict) else {}
+        passthrough = {k: envelope[k] for k in ("label", "index") if k in envelope}
+        prompt = await self._render_and_publish(message, passthrough)
+        if self._is_dry_run():
+            return
+        reply = await self._infer_with_retry(prompt)
+
         row = copy.deepcopy(envelope.get("row", {}))
         row[csv_field] = reply
         envelope["row"] = row
@@ -156,18 +182,30 @@ class PersistentLMAgentOid(OidComponent):
 
     # ------------------------------------------------------------------
 
-    async def _infer_with_retry(self, message) -> str:
+    def _is_dry_run(self) -> bool:
+        value = getattr(self, "dry_run", False)
+        if isinstance(value, str):
+            return value.strip().lower() in ("true", "1", "yes")
+        return bool(value)
+
+    async def _render_and_publish(self, message, passthrough: dict) -> str:
+        """Render the prompt for message and publish it as `rendered_prompt`."""
+        prompt = render_prompt(self.prompt_template, message)
+        await self._notify("rendered_prompt", {
+            **passthrough,
+            "prompt": prompt,
+            "model": self.model,
+            "dry_run": self._is_dry_run(),
+        })
+        return prompt
+
+    async def _infer_with_retry(self, prompt: str) -> str:
         try:
             import ollama
         except ImportError as exc:
             raise RuntimeError(
                 "ollama package is required: pip install ollama"
             ) from exc
-
-        content = message.get("content", "") if isinstance(message, dict) else str(message)
-        question = message.get("question", "") if isinstance(message, dict) else ""
-
-        prompt = render_template(self.prompt_template, content, question, message)
 
         retries = int(getattr(self, "retries", 4))
         initial_timeout = float(getattr(self, "initial_timeout", 30.0))

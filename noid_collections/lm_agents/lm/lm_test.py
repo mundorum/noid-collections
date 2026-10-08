@@ -143,3 +143,56 @@ async def test_persistent_agent_fails_and_propagates() -> None:
 
     assert len(client_calls) == 2
     await comp.stop()
+
+
+async def test_rendered_prompt_published_before_llm_call() -> None:
+    bus = Bus()
+    prompts, docs = [], []
+    bus.subscribe("lm/rendered_prompt", lambda t, m: prompts.append(m))
+    bus.subscribe("lm/document", lambda t, m: docs.append(m))
+
+    comp = PersistentLMAgentOid(
+        bus=bus,
+        subscribe="test/lm/in~input",
+        publish="document~lm/document;rendered_prompt~lm/rendered_prompt",
+        properties={"prompt_template": "Answer: {{input}}"},
+    )
+    await comp.start()
+
+    with _fake_ollama_with_behavior([{"message": {"content": "42"}}]) as client_calls:
+        await bus.publish("test/lm/in", {"content": "6x7"})
+
+    assert prompts == [{"prompt": "Answer: 6x7", "model": "llama3.2", "dry_run": False}]
+    assert docs[0]["content"] == "42"
+    assert len(client_calls) == 1
+    await comp.stop()
+
+
+async def test_dry_run_publishes_prompt_without_calling_llm() -> None:
+    bus = Bus()
+    prompts, rows = [], []
+    bus.subscribe("lm/rendered_prompt", lambda t, m: prompts.append(m))
+    bus.subscribe("lm/row", lambda t, m: rows.append(m))
+
+    comp = PersistentLMAgentOid(
+        bus=bus,
+        subscribe="test/lm/row~row",
+        publish="row~lm/row;rendered_prompt~lm/rendered_prompt",
+        properties={
+            "prompt_template": "Name: {{row.name}}",
+            "csv_field": "reply",
+            "dry_run": True,
+        },
+    )
+    await comp.start()
+
+    with _fake_ollama_with_behavior([]) as client_calls:
+        await bus.publish("test/lm/row", {"label": "people", "index": 3, "row": {"name": "Ana"}})
+
+    assert prompts == [{
+        "label": "people", "index": 3,
+        "prompt": "Name: Ana", "model": "llama3.2", "dry_run": True,
+    }]
+    assert rows == []
+    assert client_calls == []
+    await comp.stop()

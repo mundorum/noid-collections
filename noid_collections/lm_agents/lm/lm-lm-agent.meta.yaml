@@ -54,6 +54,12 @@ properties:
       and all retries fail.
     default: LLM_ERROR
     required: false
+  dry_run:
+    description: If true, render the prompt and publish it as `rendered_prompt` without
+      calling the LLM. `document` and `row` are not published, so downstream writers
+      and progress trackers do not record anything.
+    default: false
+    required: false
 input_notices:
   input:
     description: 'Triggers LLM inference on a single item. Payload keys: content (str),
@@ -74,3 +80,8 @@ output_notices:
   row:
     description: Input row with the LLM reply added under row[csv_field]. label/index
       are passed through unchanged.
+  rendered_prompt:
+    description: 'Prompt with the input fields injected, exactly as sent to the LLM.
+      Emitted before every LLM call, and instead of it when dry_run is true. Payload
+      keys: prompt (str), model (str), dry_run (bool); label/index are passed through
+      from row notices.'
