@@ -78,7 +78,8 @@ logger = logging.getLogger(__name__)
             "description": (
                 "If true, render the prompt and publish it as `rendered_prompt` without "
                 "calling the LLM. `document` and `row` are not published, so downstream "
-                "writers and progress trackers do not record anything."
+                "writers and progress trackers do not record anything; `skipped` is "
+                "published instead, so it can be wired to request the next item."
             ),
         },
     },
@@ -104,7 +105,7 @@ logger = logging.getLogger(__name__)
     },
     "publish": (
         "document~lm/document;schema~lm/schema;row~lm/row"
-        ";rendered_prompt~lm/rendered_prompt"
+        ";rendered_prompt~lm/rendered_prompt;skipped~lm/skipped"
     ),
     "output_notices": {
         "document": {
@@ -133,6 +134,13 @@ logger = logging.getLogger(__name__)
                 "are passed through from row notices."
             ),
         },
+        "skipped": {
+            "description": (
+                "Emitted only when dry_run is true, after rendered_prompt, in place of "
+                "document/row. Payload: the received message unchanged. Wire it to the "
+                "source's `next` to preview every row (e.g. skipped~request/next)."
+            ),
+        },
     },
 })
 class PersistentLMAgentOid(OidComponent):
@@ -141,6 +149,7 @@ class PersistentLMAgentOid(OidComponent):
     async def handle_input(self, notice: str, message: dict) -> None:
         prompt = await self._render_and_publish(message, {})
         if self._is_dry_run():
+            await self._notify("skipped", message)
             return
         reply = await self._infer_with_retry(prompt)
 
@@ -172,6 +181,7 @@ class PersistentLMAgentOid(OidComponent):
         passthrough = {k: envelope[k] for k in ("label", "index") if k in envelope}
         prompt = await self._render_and_publish(message, passthrough)
         if self._is_dry_run():
+            await self._notify("skipped", message)
             return
         reply = await self._infer_with_retry(prompt)
 

@@ -147,14 +147,15 @@ async def test_persistent_agent_fails_and_propagates() -> None:
 
 async def test_rendered_prompt_published_before_llm_call() -> None:
     bus = Bus()
-    prompts, docs = [], []
+    prompts, docs, skipped = [], [], []
     bus.subscribe("lm/rendered_prompt", lambda t, m: prompts.append(m))
     bus.subscribe("lm/document", lambda t, m: docs.append(m))
+    bus.subscribe("lm/skipped", lambda t, m: skipped.append(m))
 
     comp = PersistentLMAgentOid(
         bus=bus,
         subscribe="test/lm/in~input",
-        publish="document~lm/document;rendered_prompt~lm/rendered_prompt",
+        publish="document~lm/document;rendered_prompt~lm/rendered_prompt;skipped~lm/skipped",
         properties={"prompt_template": "Answer: {{input}}"},
     )
     await comp.start()
@@ -163,6 +164,7 @@ async def test_rendered_prompt_published_before_llm_call() -> None:
         await bus.publish("test/lm/in", {"content": "6x7"})
 
     assert prompts == [{"prompt": "Answer: 6x7", "model": "llama3.2", "dry_run": False}]
+    assert skipped == []
     assert docs[0]["content"] == "42"
     assert len(client_calls) == 1
     await comp.stop()
@@ -170,14 +172,15 @@ async def test_rendered_prompt_published_before_llm_call() -> None:
 
 async def test_dry_run_publishes_prompt_without_calling_llm() -> None:
     bus = Bus()
-    prompts, rows = [], []
+    prompts, rows, skipped = [], [], []
     bus.subscribe("lm/rendered_prompt", lambda t, m: prompts.append(m))
     bus.subscribe("lm/row", lambda t, m: rows.append(m))
+    bus.subscribe("lm/skipped", lambda t, m: skipped.append(m))
 
     comp = PersistentLMAgentOid(
         bus=bus,
         subscribe="test/lm/row~row",
-        publish="row~lm/row;rendered_prompt~lm/rendered_prompt",
+        publish="row~lm/row;rendered_prompt~lm/rendered_prompt;skipped~lm/skipped",
         properties={
             "prompt_template": "Name: {{row.name}}",
             "csv_field": "reply",
@@ -194,5 +197,6 @@ async def test_dry_run_publishes_prompt_without_calling_llm() -> None:
         "prompt": "Name: Ana", "model": "llama3.2", "dry_run": True,
     }]
     assert rows == []
+    assert skipped == [{"label": "people", "index": 3, "row": {"name": "Ana"}}]
     assert client_calls == []
     await comp.stop()
